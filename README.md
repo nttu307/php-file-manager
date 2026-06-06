@@ -31,6 +31,8 @@ public/
 ## Route Chính
 
 - `/login.php`: đăng nhập.
+- `/forgot_password.php`: yêu cầu link đặt lại mật khẩu qua email.
+- `/reset_password.php`: đặt lại mật khẩu bằng token.
 - `/files.php`: danh sách file, upload, tìm kiếm và lọc.
 - `/trash.php`: thùng rác file đã xóa.
 - `/profile.php`: thông tin tài khoản và đổi mật khẩu.
@@ -95,6 +97,7 @@ php -S localhost:8000 -t public
 - Admin tạo/sửa user, khóa user, đổi role, reset mật khẩu và chỉnh quota.
 - Log các hành động thay đổi dữ liệu như upload, xóa, khôi phục, bật/tắt link public, tạo/sửa user và đổi mật khẩu.
 - User đổi mật khẩu cá nhân trong trang Profile.
+- User có thể yêu cầu link quên mật khẩu qua email; token được lưu dạng hash và có thời hạn.
 
 ## Database
 
@@ -108,7 +111,10 @@ File này đã bao gồm toàn bộ bảng/cột/index cần thiết cho source 
 
 - `users`
 - `files`, bao gồm cột `file_type` để phân loại `image`, `document`, `archive`, `spreadsheet`, `presentation`, `audio`, `video`, `font`
+- `password_resets`, lưu hash token đặt lại mật khẩu
 - `activity_logs`
+
+Các cột thời gian như `created_at`, `updated_at`, `deleted_at`, `expires_at`, `used_at` được lưu bằng Unix timestamp. Khi hiển thị trên giao diện, hệ thống format lại theo dạng `dd/mm/YYYY HH:ii:ss`.
 
 Không cần chạy migration riêng.
 
@@ -147,7 +153,18 @@ UPLOAD_MAX_SIZE_MB="10"
 UPLOAD_MAX_FILES_PER_UPLOAD="10"
 DEFAULT_USER_STORAGE_LIMIT_MB="500"
 TRASH_RETENTION_DAYS="7"
+
+MAIL_FROM_EMAIL="no-reply@example.com"
+MAIL_FROM_NAME="PHP File Manager"
+MAIL_HOST="smtp.gmail.com"
+MAIL_PORT="587"
+MAIL_USERNAME=""
+MAIL_PASSWORD=""
+MAIL_ENCRYPTION="tls"
+PASSWORD_RESET_MINUTES="30"
 ```
+
+Chức năng quên mật khẩu gửi mail qua SMTP. Nếu dùng Gmail, cần bật 2-Step Verification và tạo App Password, sau đó đặt `MAIL_USERNAME` là email Gmail và `MAIL_PASSWORD` là App Password. Với SMTP SSL port 465, đặt `MAIL_ENCRYPTION="ssl"`.
 
 ## Ghi Chú Bảo Mật
 

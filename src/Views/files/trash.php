@@ -43,7 +43,7 @@ use Src\Core\Helpers;
                     <td><?= Helpers::e($file['original_name']) ?></td>
                     <td><?= Helpers::e($file['owner_name']) ?></td>
                     <td><?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?></td>
-                    <td><?= Helpers::e($file['deleted_at']) ?></td>
+                    <td><?= Helpers::e(Helpers::formatDateTime($file['deleted_at'])) ?></td>
                     <td class="text-end">
                         <div class="action-wrap justify-content-end">
                         <form class="d-inline" method="post" action="/restore.php">
@@ -69,14 +69,4 @@ use Src\Core\Helpers;
     </div>
 </div>
 
-<?php if ($totalPages > 1): ?>
-    <nav class="mt-3">
-        <ul class="pagination">
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                    <a class="page-link" href="/trash.php?page=<?= $i ?>"><?= $i ?></a>
-                </li>
-            <?php endfor; ?>
-        </ul>
-    </nav>
-<?php endif; ?>
+<?= Helpers::pagination('/trash.php', $page, $totalPages) ?>

@@ -39,7 +39,7 @@ use Src\Core\Helpers;
                     <td>
                         <?= $item['role'] === 'admin' || $item['storage_limit'] === null ? 'Unlimited' : Helpers::e(Helpers::formatBytes((int) $item['storage_limit'])) ?>
                     </td>
-                    <td><?= Helpers::e($item['created_at']) ?></td>
+                    <td><?= Helpers::e(Helpers::formatDateTime($item['created_at'])) ?></td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-primary icon-btn" href="/user_edit.php?id=<?= (int) $item['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Edit user">
                             <i class="bi bi-pencil-square"></i>

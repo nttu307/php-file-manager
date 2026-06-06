@@ -2,6 +2,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS activity_logs;
+DROP TABLE IF EXISTS password_resets;
 DROP TABLE IF EXISTS files;
 DROP TABLE IF EXISTS users;
 
@@ -16,8 +17,8 @@ CREATE TABLE users (
     role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
     status ENUM('active', 'locked') NOT NULL DEFAULT 'active',
     storage_limit BIGINT UNSIGNED NULL DEFAULT NULL,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NULL,
+    created_at BIGINT UNSIGNED NOT NULL,
+    updated_at BIGINT UNSIGNED NULL,
     UNIQUE KEY uq_users_email (email),
     INDEX idx_users_role (role),
     INDEX idx_users_status (status)
@@ -37,8 +38,8 @@ CREATE TABLE files (
     thumbnail_path VARCHAR(500) NULL,
     public_token CHAR(48) NOT NULL,
     visibility ENUM('private', 'public') NOT NULL DEFAULT 'public',
-    created_at DATETIME NOT NULL,
-    deleted_at DATETIME NULL,
+    created_at BIGINT UNSIGNED NOT NULL,
+    deleted_at BIGINT UNSIGNED NULL,
     UNIQUE KEY uq_files_public_token (public_token),
     INDEX idx_files_user_id (user_id),
     INDEX idx_files_file_type (file_type),
@@ -59,7 +60,7 @@ CREATE TABLE activity_logs (
     file_id INT UNSIGNED NULL,
     ip_address VARCHAR(45) NULL,
     user_agent VARCHAR(255) NULL,
-    created_at DATETIME NOT NULL,
+    created_at BIGINT UNSIGNED NOT NULL,
     INDEX idx_activity_user_id (user_id),
     INDEX idx_activity_file_id (file_id),
     INDEX idx_activity_action (action),
@@ -72,4 +73,21 @@ CREATE TABLE activity_logs (
         FOREIGN KEY (file_id) REFERENCES files(id)
         ON UPDATE CASCADE
         ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Password reset tokens. Raw tokens are never stored.
+CREATE TABLE password_resets (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at BIGINT UNSIGNED NOT NULL,
+    used_at BIGINT UNSIGNED NULL,
+    created_at BIGINT UNSIGNED NOT NULL,
+    UNIQUE KEY uq_password_resets_token_hash (token_hash),
+    INDEX idx_password_resets_user_id (user_id),
+    INDEX idx_password_resets_expires_at (expires_at),
+    CONSTRAINT fk_password_resets_user_id
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

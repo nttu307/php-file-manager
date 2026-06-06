@@ -36,19 +36,19 @@ class UserModel
 
     public static function create(string $name, string $email, string $password, string $role, ?int $storageLimit): void
     {
-        $stmt = Database::connection()->prepare('INSERT INTO users (name, email, password_hash, role, status, storage_limit, created_at) VALUES (?, ?, ?, ?, "active", ?, NOW())');
+        $stmt = Database::connection()->prepare('INSERT INTO users (name, email, password_hash, role, status, storage_limit, created_at) VALUES (?, ?, ?, ?, "active", ?, UNIX_TIMESTAMP())');
         $stmt->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT), $role, $storageLimit]);
     }
 
     public static function update(int $id, string $name, string $email, string $role, string $status, ?int $storageLimit): void
     {
-        $stmt = Database::connection()->prepare('UPDATE users SET name = ?, email = ?, role = ?, status = ?, storage_limit = ?, updated_at = NOW() WHERE id = ?');
+        $stmt = Database::connection()->prepare('UPDATE users SET name = ?, email = ?, role = ?, status = ?, storage_limit = ?, updated_at = UNIX_TIMESTAMP() WHERE id = ?');
         $stmt->execute([$name, $email, $role, $status, $storageLimit, $id]);
     }
 
     public static function updatePassword(int $id, string $password): void
     {
-        $stmt = Database::connection()->prepare('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?');
+        $stmt = Database::connection()->prepare('UPDATE users SET password_hash = ?, updated_at = UNIX_TIMESTAMP() WHERE id = ?');
         $stmt->execute([password_hash($password, PASSWORD_DEFAULT), $id]);
     }
 

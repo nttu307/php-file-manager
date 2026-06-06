@@ -10,7 +10,7 @@ class ActivityLog
     public static function create(string $action, ?int $fileId = null): void
     {
         $user = Auth::user();
-        $stmt = Database::connection()->prepare('INSERT INTO activity_logs (user_id, action, file_id, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
+        $stmt = Database::connection()->prepare('INSERT INTO activity_logs (user_id, action, file_id, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, UNIX_TIMESTAMP())');
         $stmt->execute([
             $user['id'] ?? null,
             $action,

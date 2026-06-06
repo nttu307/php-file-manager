@@ -28,13 +28,18 @@ class FileController
             'to' => trim($_GET['to'] ?? ''),
         ];
         $result = FileModel::paginate($page, $perPage, $filters);
+        $totalPages = max(1, (int) ceil($result['total'] / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $result = FileModel::paginate($page, $perPage, $filters);
+        }
         $user = Auth::user();
 
         View::render('files/index', [
             'files' => $result['items'],
             'total' => $result['total'],
             'page' => $page,
-            'totalPages' => max(1, (int) ceil($result['total'] / $perPage)),
+            'totalPages' => $totalPages,
             'filters' => $filters,
             'users' => Auth::isAdmin() ? UserModel::all() : [],
             'storageUsed' => Auth::isAdmin() ? FileModel::totalStorageUsed() : ($user ? UserModel::storageUsed((int) $user['id']) : 0),
@@ -155,6 +160,9 @@ class FileController
 
         $file = FileModel::findById((int) ($_POST['id'] ?? 0));
         if (!$file) {
+            if ($this->expectsJson()) {
+                $this->json(['ok' => false, 'message' => 'File not found.'], 404);
+            }
             Helpers::flash('danger', 'File not found.');
             Helpers::redirect('/files.php');
         }
@@ -162,6 +170,15 @@ class FileController
         Auth::requireFilePermission($file);
         $visibility = ($_POST['visibility'] ?? '') === 'public' ? 'public' : 'private';
         FileModel::updateVisibility($file, $visibility);
+
+        if ($this->expectsJson()) {
+            $this->json([
+                'ok' => true,
+                'visibility' => $visibility,
+                'next_visibility' => $visibility === 'public' ? 'private' : 'public',
+                'message' => $visibility === 'public' ? 'Public link enabled.' : 'Public link disabled.',
+            ]);
+        }
 
         Helpers::flash('success', $visibility === 'public' ? 'Public link enabled.' : 'Public link disabled.');
         Helpers::redirect('/files.php');
@@ -175,12 +192,17 @@ class FileController
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $perPage = 12;
         $result = FileModel::paginateDeleted($page, $perPage);
+        $totalPages = max(1, (int) ceil($result['total'] / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $result = FileModel::paginateDeleted($page, $perPage);
+        }
 
         View::render('files/trash', [
             'files' => $result['items'],
             'total' => $result['total'],
             'page' => $page,
-            'totalPages' => max(1, (int) ceil($result['total'] / $perPage)),
+            'totalPages' => $totalPages,
         ]);
     }
 
@@ -311,6 +333,20 @@ class FileController
         header('Content-Length: ' . filesize($file['path']));
         header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="' . StorageService::safeDownloadName($file['original_name'], 'image') . '"');
         readfile($file['path']);
+        exit;
+    }
+
+    private function expectsJson(): bool
+    {
+        return str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+            || strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest';
+    }
+
+    private function json(array $payload, int $status = 200): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json');
+        echo json_encode($payload);
         exit;
     }
 }

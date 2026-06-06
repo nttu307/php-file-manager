@@ -6,7 +6,6 @@ use Src\Core\Helpers;
 use Src\Services\StorageService;
 
 $currentUser = Auth::user();
-$query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !== '' && $value !== 0));
 
 $fileTypeIcons = [
     'image' => 'bi-file-image',
@@ -137,15 +136,16 @@ $fileTypeIcons = [
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <div class="fw-semibold file-name-text"><?= Helpers::e($displayName) ?></div>
-                            <span class="badge <?= $file['visibility'] === 'public' ? 'text-bg-success' : 'text-bg-secondary' ?>">
-                                <?= Helpers::e($file['visibility']) ?>
+                            <span class="badge <?= $file['visibility'] === 'public' ? 'text-bg-success' : 'text-bg-secondary' ?>" data-visibility-badge>
+                                <i class="bi <?= $file['visibility'] === 'public' ? 'bi-globe2' : 'bi-lock-fill' ?>"></i>
+                                <span><?= Helpers::e($file['visibility']) ?></span>
                             </span>
                         </div>
                     </td>
                     <td><span class="badge text-bg-light border"><?= Helpers::e($displayType) ?></span></td>
                     <td><?= Helpers::e($file['owner_name']) ?></td>
                     <td><?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?></td>
-                    <td><?= Helpers::e($file['created_at']) ?></td>
+                    <td><?= Helpers::e(Helpers::formatDateTime($file['created_at'])) ?></td>
                     <td class="table-actions text-end">
                         <div class="compact-actions justify-content-end">
                             <a class="compact-action text-primary" href="/view.php?id=<?= (int) $file['id'] ?>" target="_blank" data-bs-toggle="tooltip" data-bs-title="View image">
@@ -160,12 +160,17 @@ $fileTypeIcons = [
                             <button class="compact-action" type="button" data-copy-text="<?= Helpers::e($directUrl) ?>" data-bs-toggle="tooltip" data-bs-title="Copy link">
                                 <i class="bi bi-link-45deg"></i>
                             </button>
-                            <form method="post" action="/visibility.php">
+                            <form method="post" action="/visibility.php" data-visibility-form>
                                 <?= Csrf::field() ?>
                                 <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
                                 <input type="hidden" name="visibility" value="<?= $file['visibility'] === 'public' ? 'private' : 'public' ?>">
-                                <button class="compact-action" type="submit" data-bs-toggle="tooltip" data-bs-title="<?= $file['visibility'] === 'public' ? 'Disable public link' : 'Enable public link' ?>">
-                                    <i class="bi <?= $file['visibility'] === 'public' ? 'bi-link-45deg' : 'bi-link' ?>"></i>
+                                <button
+                                    class="compact-action <?= $file['visibility'] === 'public' ? 'visibility-public' : 'visibility-private' ?>"
+                                    type="submit"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="<?= $file['visibility'] === 'public' ? 'Public - click to make private' : 'Private - click to make public' ?>"
+                                >
+                                    <i class="bi <?= $file['visibility'] === 'public' ? 'bi-globe2' : 'bi-lock-fill' ?>"></i>
                                 </button>
                             </form>
                             <form method="post" action="/delete.php" data-confirm="Move this file to trash?">
@@ -323,14 +328,4 @@ if (uploadInput && preview) {
 }
 </script>
 
-<?php if ($totalPages > 1): ?>
-    <nav class="mt-3">
-        <ul class="pagination">
-            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                    <a class="page-link" href="/files.php?<?= $query ? $query . '&' : '' ?>page=<?= $i ?>"><?= $i ?></a>
-                </li>
-            <?php endfor; ?>
-        </ul>
-    </nav>
-<?php endif; ?>
+<?= Helpers::pagination('/files.php', $page, $totalPages, $filters ?? []) ?>

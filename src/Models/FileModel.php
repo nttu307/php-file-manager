@@ -67,13 +67,19 @@ class FileModel
         }
 
         if (!empty($filters['from'])) {
-            $where[] = 'DATE(files.created_at) >= ?';
-            $params[] = $filters['from'];
+            $fromTimestamp = strtotime($filters['from'] . ' 00:00:00');
+            if ($fromTimestamp !== false) {
+                $where[] = 'files.created_at >= ?';
+                $params[] = $fromTimestamp;
+            }
         }
 
         if (!empty($filters['to'])) {
-            $where[] = 'DATE(files.created_at) <= ?';
-            $params[] = $filters['to'];
+            $toTimestamp = strtotime($filters['to'] . ' 23:59:59');
+            if ($toTimestamp !== false) {
+                $where[] = 'files.created_at <= ?';
+                $params[] = $toTimestamp;
+            }
         }
 
         $whereSql = implode(' AND ', $where);
@@ -176,7 +182,7 @@ class FileModel
             : null;
 
         $user = Auth::user();
-        $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, file_type, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "public", NOW())');
+        $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, file_type, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "public", UNIX_TIMESTAMP())');
         $stmt->execute([
             $user['id'],
             $originalName,
@@ -255,7 +261,7 @@ class FileModel
 
     public static function softDelete(array $file): void
     {
-        $stmt = Database::connection()->prepare('UPDATE files SET deleted_at = NOW() WHERE id = ?');
+        $stmt = Database::connection()->prepare('UPDATE files SET deleted_at = UNIX_TIMESTAMP() WHERE id = ?');
         $stmt->execute([$file['id']]);
         ActivityLog::create('delete', (int) $file['id']);
     }
@@ -321,7 +327,7 @@ class FileModel
         global $config;
 
         $days = max(1, (int) ($config['upload']['trash_retention_days'] ?? 7));
-        $threshold = (new \DateTimeImmutable('-' . $days . ' days'))->format('Y-m-d H:i:s');
+        $threshold = time() - ($days * 86400);
 
         $stmt = Database::connection()->prepare(
             'SELECT files.*, users.name AS owner_name

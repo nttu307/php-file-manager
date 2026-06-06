@@ -13,6 +13,16 @@ return [
         'password' => Env::get('DB_PASSWORD', ''),
         'charset' => Env::get('DB_CHARSET', 'utf8mb4'),
     ],
+    'mail' => [
+        'host' => Env::get('MAIL_HOST', ''),
+        'port' => (int) Env::get('MAIL_PORT', 587),
+        'username' => Env::get('MAIL_USERNAME', ''),
+        'password' => Env::get('MAIL_PASSWORD', ''),
+        'encryption' => Env::get('MAIL_ENCRYPTION', 'tls'),
+        'from_email' => Env::get('MAIL_FROM_EMAIL', 'no-reply@example.com'),
+        'from_name' => Env::get('MAIL_FROM_NAME', 'PHP File Manager'),
+        'password_reset_minutes' => (int) Env::get('PASSWORD_RESET_MINUTES', 30),
+    ],
     'upload' => [
         'dir' => dirname(__DIR__) . '/storage/uploads',
         'thumbnail_dir' => dirname(__DIR__) . '/storage/thumbnails',

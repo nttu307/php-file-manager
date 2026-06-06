@@ -18,12 +18,17 @@ $trashCount = $user ? FileModel::deletedCountForCurrentUser() : 0;
     <link href="/assets/app.css" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg bg-white sticky-top">
+<nav class="navbar navbar-expand-lg bg-white sticky-top <?= $user ? '' : 'login-navbar' ?>">
     <div class="container page-shell">
-        <a class="navbar-brand fw-semibold" href="/">File Manager</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <a class="navbar-brand fw-semibold brand-lockup" href="/">
+            <span class="brand-mark"><i class="bi bi-folder2-open"></i></span>
+            <span>File Manager</span>
+        </a>
+        <?php if ($user): ?>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        <?php endif; ?>
         <div id="mainNavbar" class="collapse navbar-collapse">
             <?php if ($user): ?>
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
@@ -48,6 +53,12 @@ $trashCount = $user ? FileModel::deletedCountForCurrentUser() : 0;
                 </ul>
             <?php endif; ?>
         </div>
+        <?php if (!$user): ?>
+            <div class="login-header-meta">
+                <span><i class="bi bi-shield-lock"></i> Private file workspace</span>
+                <span><i class="bi bi-person-lock"></i> Sign in required</span>
+            </div>
+        <?php endif; ?>
     </div>
 </nav>
 <main class="container page-shell py-4">
