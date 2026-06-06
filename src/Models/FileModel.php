@@ -140,10 +140,13 @@ class FileModel
         $allowed = $config['upload']['allowed_mimes'];
 
         if (!isset($allowed[$mime])) {
-            throw new RuntimeException('Only jpg, png, gif, and webp images are allowed.');
+            throw new RuntimeException('This file type is not allowed.');
         }
 
-        if (!getimagesize($tmpPath)) {
+        $fileMeta = $allowed[$mime];
+        $fileType = $fileMeta['type'];
+
+        if ($fileType === 'image' && !getimagesize($tmpPath)) {
             throw new RuntimeException('The file is not a valid image.');
         }
 
@@ -151,7 +154,7 @@ class FileModel
             self::ensureStorageQuota([$uploadedFile]);
         }
 
-        $extension = $allowed[$mime];
+        $extension = $fileMeta['extension'];
         $storedName = bin2hex(random_bytes(20)) . '.' . $extension;
         $destination = StorageService::uploadPath($storedName);
 
@@ -159,16 +162,19 @@ class FileModel
             throw new RuntimeException('Could not save the uploaded file.');
         }
 
-        $thumbnailPath = ThumbnailService::create($destination, $mime, $storedName);
+        $thumbnailPath = $fileType === 'image'
+            ? ThumbnailService::create($destination, $mime, $storedName)
+            : null;
 
         $user = Auth::user();
-        $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "public", NOW())');
+        $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, file_type, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "public", NOW())');
         $stmt->execute([
             $user['id'],
             $uploadedFile['name'],
             $storedName,
             $mime,
             $extension,
+            $fileType,
             (int) $uploadedFile['size'],
             $destination,
             $thumbnailPath,

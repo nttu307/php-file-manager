@@ -93,6 +93,11 @@ class FileController
 
         Auth::requireFilePermission($file);
 
+        if (($file['file_type'] ?? '') !== 'image') {
+            http_response_code(404);
+            exit('Thumbnail not available.');
+        }
+
         if (!empty($file['thumbnail_path']) && is_file($file['thumbnail_path'])) {
             $thumb = $file;
             $thumb['path'] = $file['thumbnail_path'];

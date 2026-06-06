@@ -1,6 +1,6 @@
 # PHP Image Manager
 
-Website PHP + MySQL + Bootstrap dùng để upload và quản lý hình ảnh, có đăng nhập, phân quyền, link public, tải ZIP, thùng rác, quota dung lượng và activity logs.
+Website PHP + MySQL + Bootstrap dùng để upload và quản lý tập tin, có đăng nhập, phân quyền, link public, tải ZIP, thùng rác, quota dung lượng và activity logs.
 
 ## Kiến Trúc
 
@@ -78,11 +78,12 @@ php -S localhost:8000 -t public
 ## Tính Năng
 
 - Login/logout bằng session.
-- Upload nhiều ảnh trong một lần.
+- Upload nhiều file trong một lần.
+- Hỗ trợ ảnh, PDF, TXT, CSV, ZIP và một số định dạng Office cơ bản.
 - Kiểm tra MIME thật và dung lượng từng file.
 - Quota dung lượng theo user.
-- Tạo thumbnail nếu server có extension `gd`.
-- Xem ảnh trực tiếp qua `view.php`.
+- Tạo thumbnail cho file ảnh nếu server có extension `gd`.
+- Xem file trực tiếp qua `view.php` nếu trình duyệt hỗ trợ MIME tương ứng.
 - Link public trực tiếp bằng token.
 - Bật/tắt link public cho từng file.
 - Tải file gốc.
@@ -106,7 +107,7 @@ database/schema.sql
 File này đã bao gồm toàn bộ bảng/cột/index cần thiết cho source hiện tại:
 
 - `users`
-- `files`
+- `files`, bao gồm cột `file_type` để phân loại `image`, `document`, `archive`, `spreadsheet`
 - `activity_logs`
 
 Không cần chạy migration riêng.

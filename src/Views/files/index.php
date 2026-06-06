@@ -6,10 +6,17 @@ use Src\Core\Helpers;
 
 $currentUser = Auth::user();
 $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !== '' && $value !== 0));
+
+$fileTypeIcons = [
+    'image' => 'bi-file-image',
+    'document' => 'bi-file-earmark-text',
+    'archive' => 'bi-file-zip',
+    'spreadsheet' => 'bi-file-earmark-spreadsheet',
+];
 ?>
 <div class="page-heading mb-3">
     <div>
-        <h1 class="h3 mb-1">Image Library</h1>
+        <h1 class="h3 mb-1">File Manager</h1>
         <div class="text-muted small"><?= (int) $total ?> file</div>
     </div>
     <?php if ($currentUser): ?>
@@ -35,9 +42,9 @@ $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !==
         <form class="upload-form" method="post" action="/upload.php" enctype="multipart/form-data">
             <?= Csrf::field() ?>
             <div class="upload-field">
-                <label class="form-label">Upload Images</label>
-                <input id="image-upload-input" class="form-control" type="file" name="images[]" accept="image/jpeg,image/png,image/gif,image/webp" multiple required>
-                <div class="form-text">You can select multiple images in one upload.</div>
+                <label class="form-label">Upload Files</label>
+                <input id="image-upload-input" class="form-control" type="file" name="images[]" multiple required>
+                <div class="form-text">You can select multiple files in one upload.</div>
             </div>
             <div class="upload-submit">
                 <button class="btn btn-primary" type="submit">
@@ -96,6 +103,7 @@ $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !==
                 <th style="width: 42px;"></th>
                 <th>Preview</th>
                 <th>File Name</th>
+                <th>Type</th>
                 <th>Owner</th>
                 <th>Size</th>
                 <th>Uploaded At</th>
@@ -104,13 +112,21 @@ $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !==
             </thead>
             <tbody>
             <?php if (!$files): ?>
-                <tr><td colspan="7" class="text-center text-muted py-5">No files found.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-5">No files found.</td></tr>
             <?php endif; ?>
             <?php foreach ($files as $file): ?>
                 <?php $directUrl = Helpers::appUrl('/view.php?token=' . $file['public_token']); ?>
                 <tr>
                     <td><input class="form-check-input" type="checkbox" name="ids[]" value="<?= (int) $file['id'] ?>"></td>
-                    <td><img class="thumb" src="/thumb.php?id=<?= (int) $file['id'] ?>" alt=""></td>
+                    <td>
+                        <?php if (($file['file_type'] ?? '') === 'image'): ?>
+                            <img class="thumb" src="/thumb.php?id=<?= (int) $file['id'] ?>" alt="">
+                        <?php else: ?>
+                            <div class="file-icon-preview">
+                                <i class="bi <?= Helpers::e($fileTypeIcons[$file['file_type']] ?? 'bi-file-earmark') ?>"></i>
+                            </div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <div class="fw-semibold"><?= Helpers::e($file['original_name']) ?></div>
@@ -119,6 +135,7 @@ $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !==
                             </span>
                         </div>
                     </td>
+                    <td><span class="badge text-bg-light border"><?= Helpers::e($file['file_type'] ?? 'file') ?></span></td>
                     <td><?= Helpers::e($file['owner_name']) ?></td>
                     <td><?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?></td>
                     <td><?= Helpers::e($file['created_at']) ?></td>
@@ -230,6 +247,15 @@ const uploadInput = document.getElementById('image-upload-input');
 const preview = document.getElementById('upload-preview');
 let selectedUploadFiles = [];
 
+function iconForFile(file) {
+    if (file.type.startsWith('image/')) return 'bi-file-image';
+    if (file.type === 'application/pdf') return 'bi-file-earmark-pdf';
+    if (file.type.includes('zip')) return 'bi-file-zip';
+    if (file.type.includes('sheet') || file.type.includes('excel') || file.name.match(/\.(csv|xls|xlsx)$/i)) return 'bi-file-earmark-spreadsheet';
+    if (file.type.includes('word') || file.name.match(/\.(doc|docx|txt)$/i)) return 'bi-file-earmark-text';
+    return 'bi-file-earmark';
+}
+
 function syncUploadInput() {
     const dataTransfer = new DataTransfer();
     selectedUploadFiles.forEach((file) => dataTransfer.items.add(file));
@@ -243,10 +269,17 @@ function renderUploadPreview() {
         const item = document.createElement('div');
         item.className = 'upload-preview-item';
 
-        const image = document.createElement('img');
-        image.src = URL.createObjectURL(file);
-        image.alt = file.name;
-        image.onload = () => URL.revokeObjectURL(image.src);
+        let visual;
+        if (file.type.startsWith('image/')) {
+            visual = document.createElement('img');
+            visual.src = URL.createObjectURL(file);
+            visual.alt = file.name;
+            visual.onload = () => URL.revokeObjectURL(visual.src);
+        } else {
+            visual = document.createElement('div');
+            visual.className = 'upload-file-icon';
+            visual.innerHTML = `<i class="bi ${iconForFile(file)}"></i>`;
+        }
 
         const meta = document.createElement('div');
         meta.className = 'upload-preview-meta';
@@ -262,7 +295,7 @@ function renderUploadPreview() {
             renderUploadPreview();
         });
 
-        item.appendChild(image);
+        item.appendChild(visual);
         item.appendChild(meta);
         item.appendChild(remove);
         preview.appendChild(item);

@@ -50,6 +50,18 @@ body {
     background: #fff;
 }
 
+.file-icon-preview {
+    display: grid;
+    width: 72px;
+    height: 72px;
+    place-items: center;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 30px;
+}
+
 .table-actions {
     min-width: 76px;
 }
@@ -182,6 +194,17 @@ body {
     object-fit: cover;
     border-radius: 4px;
     background: #f3f4f6;
+}
+
+.upload-file-icon {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 1;
+    place-items: center;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #64748b;
+    font-size: 38px;
 }
 
 .upload-preview-meta {
