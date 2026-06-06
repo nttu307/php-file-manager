@@ -5,6 +5,7 @@ use Src\Core\Env;
 return [
     'app_name' => Env::get('APP_NAME', 'PHP File Manager'),
     'base_url' => Env::get('APP_URL', 'http://localhost:8000'),
+    'timezone' => Env::get('APP_TIMEZONE', 'Asia/Ho_Chi_Minh'),
     'db' => [
         'host' => Env::get('DB_HOST', '127.0.0.1'),
         'port' => Env::get('DB_PORT', '3306'),

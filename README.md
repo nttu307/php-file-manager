@@ -114,7 +114,7 @@ File này đã bao gồm toàn bộ bảng/cột/index cần thiết cho source 
 - `password_resets`, lưu hash token đặt lại mật khẩu
 - `activity_logs`
 
-Các cột thời gian như `created_at`, `updated_at`, `deleted_at`, `expires_at`, `used_at` được lưu bằng Unix timestamp. Khi hiển thị trên giao diện, hệ thống format lại theo dạng `dd/mm/YYYY HH:ii:ss`.
+Các cột thời gian như `created_at`, `updated_at`, `deleted_at`, `expires_at`, `used_at` được lưu bằng Unix timestamp. Khi hiển thị trên giao diện, hệ thống format lại theo dạng `dd/mm/YYYY HH:ii:ss` theo timezone cấu hình trong `APP_TIMEZONE`.
 
 Không cần chạy migration riêng.
 
@@ -142,6 +142,7 @@ Các tham số chính:
 ```env
 APP_NAME="PHP File Manager"
 APP_URL="http://localhost:8000"
+APP_TIMEZONE="Asia/Ho_Chi_Minh"
 
 DB_HOST="127.0.0.1"
 DB_PORT="3306"

@@ -6,6 +6,11 @@ require dirname(__DIR__) . '/src/Core/Env.php';
 
 \Src\Core\Env::load(dirname(__DIR__) . '/.env');
 
+$timezone = \Src\Core\Env::get('APP_TIMEZONE', 'Asia/Ho_Chi_Minh');
+if (is_string($timezone) && in_array($timezone, timezone_identifiers_list(), true)) {
+    date_default_timezone_set($timezone);
+}
+
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
