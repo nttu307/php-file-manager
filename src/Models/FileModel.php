@@ -155,6 +155,7 @@ class FileModel
         }
 
         $extension = $fileMeta['extension'];
+        $originalName = StorageService::safeDownloadName($uploadedFile['name'], 'upload.' . $extension);
         $storedName = bin2hex(random_bytes(20)) . '.' . $extension;
         $destination = StorageService::uploadPath($storedName);
 
@@ -170,7 +171,7 @@ class FileModel
         $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, file_type, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "public", NOW())');
         $stmt->execute([
             $user['id'],
-            $uploadedFile['name'],
+            $originalName,
             $storedName,
             $mime,
             $extension,

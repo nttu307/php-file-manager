@@ -3,6 +3,7 @@
 use Src\Core\Csrf;
 use Src\Core\Auth;
 use Src\Core\Helpers;
+use Src\Services\StorageService;
 
 $currentUser = Auth::user();
 $query = http_build_query(array_filter($filters ?? [], fn ($value) => $value !== '' && $value !== 0));
@@ -116,26 +117,28 @@ $fileTypeIcons = [
             <?php endif; ?>
             <?php foreach ($files as $file): ?>
                 <?php $directUrl = Helpers::appUrl('/view.php?token=' . $file['public_token']); ?>
+                <?php $displayName = StorageService::safeDownloadName($file['original_name'], 'file'); ?>
+                <?php $displayType = $file['file_type'] ?? (str_starts_with($file['mime_type'] ?? '', 'image/') ? 'image' : 'file'); ?>
                 <tr>
                     <td><input class="form-check-input" type="checkbox" name="ids[]" value="<?= (int) $file['id'] ?>"></td>
                     <td>
-                        <?php if (($file['file_type'] ?? '') === 'image'): ?>
+                        <?php if ($displayType === 'image'): ?>
                             <img class="thumb" src="/thumb.php?id=<?= (int) $file['id'] ?>" alt="">
                         <?php else: ?>
                             <div class="file-icon-preview">
-                                <i class="bi <?= Helpers::e($fileTypeIcons[$file['file_type']] ?? 'bi-file-earmark') ?>"></i>
+                                <i class="bi <?= Helpers::e($fileTypeIcons[$displayType] ?? 'bi-file-earmark') ?>"></i>
                             </div>
                         <?php endif; ?>
                     </td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <div class="fw-semibold"><?= Helpers::e($file['original_name']) ?></div>
+                            <div class="fw-semibold file-name-text"><?= Helpers::e($displayName) ?></div>
                             <span class="badge <?= $file['visibility'] === 'public' ? 'text-bg-success' : 'text-bg-secondary' ?>">
                                 <?= Helpers::e($file['visibility']) ?>
                             </span>
                         </div>
                     </td>
-                    <td><span class="badge text-bg-light border"><?= Helpers::e($file['file_type'] ?? 'file') ?></span></td>
+                    <td><span class="badge text-bg-light border"><?= Helpers::e($displayType) ?></span></td>
                     <td><?= Helpers::e($file['owner_name']) ?></td>
                     <td><?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?></td>
                     <td><?= Helpers::e($file['created_at']) ?></td>

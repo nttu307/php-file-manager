@@ -41,6 +41,12 @@ body {
     vertical-align: middle;
 }
 
+.file-name-text {
+    max-width: 420px;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
 .thumb {
     width: 72px;
     height: 72px;

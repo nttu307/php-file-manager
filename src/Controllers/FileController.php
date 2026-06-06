@@ -93,7 +93,8 @@ class FileController
 
         Auth::requireFilePermission($file);
 
-        if (($file['file_type'] ?? '') !== 'image') {
+        $isImage = ($file['file_type'] ?? '') === 'image' || str_starts_with($file['mime_type'] ?? '', 'image/');
+        if (!$isImage) {
             http_response_code(404);
             exit('Thumbnail not available.');
         }
