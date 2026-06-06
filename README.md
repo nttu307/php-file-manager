@@ -134,12 +134,12 @@ TRASH_RETENTION_DAYS="7"
 Các tham số chính:
 
 ```env
-APP_NAME="PHP Image Manager"
+APP_NAME="PHP File Manager"
 APP_URL="http://localhost:8000"
 
 DB_HOST="127.0.0.1"
 DB_PORT="3306"
-DB_DATABASE="php_image_manager"
+DB_DATABASE="php_file_manager"
 DB_USERNAME="root"
 DB_PASSWORD=""
 
