@@ -13,6 +13,10 @@ $fileTypeIcons = [
     'document' => 'bi-file-earmark-text',
     'archive' => 'bi-file-zip',
     'spreadsheet' => 'bi-file-earmark-spreadsheet',
+    'presentation' => 'bi-file-earmark-slides',
+    'audio' => 'bi-file-earmark-music',
+    'video' => 'bi-file-earmark-play',
+    'font' => 'bi-file-earmark-font',
 ];
 ?>
 <div class="page-heading mb-3">
@@ -254,8 +258,13 @@ function iconForFile(file) {
     if (file.type.startsWith('image/')) return 'bi-file-image';
     if (file.type === 'application/pdf') return 'bi-file-earmark-pdf';
     if (file.type.includes('zip')) return 'bi-file-zip';
+    if (file.type.includes('rar') || file.type.includes('7z') || file.type.includes('gzip') || file.type.includes('tar')) return 'bi-file-zip';
     if (file.type.includes('sheet') || file.type.includes('excel') || file.name.match(/\.(csv|xls|xlsx)$/i)) return 'bi-file-earmark-spreadsheet';
-    if (file.type.includes('word') || file.name.match(/\.(doc|docx|txt)$/i)) return 'bi-file-earmark-text';
+    if (file.type.includes('presentation') || file.type.includes('powerpoint') || file.name.match(/\.(ppt|pptx|odp)$/i)) return 'bi-file-earmark-slides';
+    if (file.type.startsWith('audio/') || file.name.match(/\.(mp3|wav|ogg)$/i)) return 'bi-file-earmark-music';
+    if (file.type.startsWith('video/') || file.name.match(/\.(mp4|webm|mov)$/i)) return 'bi-file-earmark-play';
+    if (file.type.startsWith('font/') || file.name.match(/\.(ttf|otf|woff|woff2)$/i)) return 'bi-file-earmark-font';
+    if (file.type.includes('word') || file.name.match(/\.(doc|docx|txt|md|json|xml|yaml|yml|rtf)$/i)) return 'bi-file-earmark-text';
     return 'bi-file-earmark';
 }
 

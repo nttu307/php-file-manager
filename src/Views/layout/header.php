@@ -2,8 +2,10 @@
 
 use Src\Core\Auth;
 use Src\Core\Helpers;
+use Src\Models\FileModel;
 
 $user = Auth::user();
+$trashCount = $user ? FileModel::deletedCountForCurrentUser() : 0;
 ?>
 <!doctype html>
 <html lang="en">
@@ -26,7 +28,14 @@ $user = Auth::user();
             <?php if ($user): ?>
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
                     <li class="nav-item"><a class="nav-link" href="/files.php">Files</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/trash.php">Trash</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-notify" href="/trash.php">
+                            <span>Trash</span>
+                            <?php if ($trashCount > 0): ?>
+                                <span class="nav-notification-dot" aria-label="Trash has files"></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
                     <?php if (Auth::isAdmin()): ?>
                         <li class="nav-item"><a class="nav-link" href="/users.php">Users</a></li>
                         <li class="nav-item"><a class="nav-link" href="/logs.php">Logs</a></li>

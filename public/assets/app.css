@@ -8,6 +8,20 @@ body {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+.nav-link-notify {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-notification-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.14);
+}
+
 .page-shell {
     width: min(100%, 1680px);
     max-width: none;

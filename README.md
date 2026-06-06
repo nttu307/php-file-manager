@@ -79,7 +79,7 @@ php -S localhost:8000 -t public
 
 - Login/logout bằng session.
 - Upload nhiều file trong một lần.
-- Hỗ trợ ảnh, PDF, TXT, CSV, ZIP và một số định dạng Office cơ bản.
+- Hỗ trợ ảnh JPG/PNG/GIF/WebP/AVIF/BMP, PDF, TXT, CSV, JSON, XML, YAML, Markdown, RTF, ZIP/RAR/7Z/TAR/GZ, Microsoft Office, OpenDocument, audio, video và font cơ bản.
 - Kiểm tra MIME thật và dung lượng từng file.
 - Quota dung lượng theo user. Tài khoản admin dùng `storage_limit = NULL` để biểu thị không giới hạn.
 - Tạo thumbnail cho file ảnh nếu server có extension `gd`.
@@ -107,7 +107,7 @@ database/schema.sql
 File này đã bao gồm toàn bộ bảng/cột/index cần thiết cho source hiện tại:
 
 - `users`
-- `files`, bao gồm cột `file_type` để phân loại `image`, `document`, `archive`, `spreadsheet`
+- `files`, bao gồm cột `file_type` để phân loại `image`, `document`, `archive`, `spreadsheet`, `presentation`, `audio`, `video`, `font`
 - `activity_logs`
 
 Không cần chạy migration riêng.

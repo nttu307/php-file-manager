@@ -38,6 +38,22 @@ class FileModel
         return $stmt->fetch() ?: null;
     }
 
+    public static function deletedCountForCurrentUser(): int
+    {
+        $where = ['deleted_at IS NOT NULL'];
+        $params = [];
+
+        if (!Auth::isAdmin()) {
+            $where[] = 'user_id = ?';
+            $params[] = (int) Auth::user()['id'];
+        }
+
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM files WHERE ' . implode(' AND ', $where));
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
+    }
+
     public static function paginate(int $page, int $perPage, array $filters = []): array
     {
         $user = Auth::user();
