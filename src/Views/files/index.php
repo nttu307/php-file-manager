@@ -21,7 +21,7 @@ $fileTypeIcons = [
 ?>
 <div class="page-heading mb-3">
     <div>
-        <h1 class="h3 mb-1">File Manager</h1>
+        <h1 class="h3 mb-1">File Library</h1>
         <div class="text-muted small"><?= (int) $total ?> file</div>
     </div>
     <?php if ($currentUser): ?>

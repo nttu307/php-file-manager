@@ -1,4 +1,4 @@
-# PHP Image Manager
+# PHP File Manager
 
 Website PHP + MySQL + Bootstrap dùng để upload và quản lý tập tin, có đăng nhập, phân quyền, link public, tải ZIP, thùng rác, quota dung lượng và activity logs.
 

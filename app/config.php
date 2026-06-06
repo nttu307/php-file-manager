@@ -3,12 +3,12 @@
 use Src\Core\Env;
 
 return [
-    'app_name' => Env::get('APP_NAME', 'PHP Image Manager'),
+    'app_name' => Env::get('APP_NAME', 'PHP File Manager'),
     'base_url' => Env::get('APP_URL', 'http://localhost:8000'),
     'db' => [
         'host' => Env::get('DB_HOST', '127.0.0.1'),
         'port' => Env::get('DB_PORT', '3306'),
-        'database' => Env::get('DB_DATABASE', 'php_image_manager'),
+        'database' => Env::get('DB_DATABASE', 'php_file_manager'),
         'username' => Env::get('DB_USERNAME', 'root'),
         'password' => Env::get('DB_PASSWORD', ''),
         'charset' => Env::get('DB_CHARSET', 'utf8mb4'),

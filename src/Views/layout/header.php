@@ -20,7 +20,7 @@ $trashCount = $user ? FileModel::deletedCountForCurrentUser() : 0;
 <body>
 <nav class="navbar navbar-expand-lg bg-white sticky-top">
     <div class="container page-shell">
-        <a class="navbar-brand fw-semibold" href="/">Image Manager</a>
+        <a class="navbar-brand fw-semibold" href="/">File Manager</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
