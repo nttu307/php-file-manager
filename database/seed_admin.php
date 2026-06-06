@@ -14,7 +14,7 @@ if (!$email || !$password) {
     exit("Usage: php database/seed_admin.php admin@example.com 123456 \"Admin\"\n");
 }
 
-$stmt = Database::connection()->prepare('INSERT INTO users (name, email, password_hash, role, status, created_at) VALUES (?, ?, ?, "admin", "active", NOW())');
+$stmt = Database::connection()->prepare('INSERT INTO users (name, email, password_hash, role, status, storage_limit, created_at) VALUES (?, ?, ?, "admin", "active", NULL, NOW())');
 $stmt->execute([
     $name ?: 'Admin',
     $email,

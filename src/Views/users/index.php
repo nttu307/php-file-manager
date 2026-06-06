@@ -37,7 +37,7 @@ use Src\Core\Helpers;
                         </span>
                     </td>
                     <td>
-                        <?= $item['role'] === 'admin' ? 'Unlimited' : Helpers::e(Helpers::formatBytes((int) $item['storage_limit'])) ?>
+                        <?= $item['role'] === 'admin' || $item['storage_limit'] === null ? 'Unlimited' : Helpers::e(Helpers::formatBytes((int) $item['storage_limit'])) ?>
                     </td>
                     <td><?= Helpers::e($item['created_at']) ?></td>
                     <td class="text-end">

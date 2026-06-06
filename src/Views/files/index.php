@@ -28,10 +28,10 @@ $fileTypeIcons = [
                 <div class="text-muted small">Admin quota: Unlimited</div>
             <?php else: ?>
                 <div class="fw-semibold">
-                    <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> / <?= Helpers::e(Helpers::formatBytes((int) $currentUser['storage_limit'])) ?>
+                    <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> / <?= Helpers::e(Helpers::formatBytes((int) ($currentUser['storage_limit'] ?? 0))) ?>
                 </div>
                 <div class="text-muted small">
-                    <?= (int) round(((int) $storageUsed) / 1024 / 1024) ?> / <?= (int) round(((int) $currentUser['storage_limit']) / 1024 / 1024) ?> MB
+                    <?= (int) round(((int) $storageUsed) / 1024 / 1024) ?> / <?= (int) round(((int) ($currentUser['storage_limit'] ?? 0)) / 1024 / 1024) ?> MB
                 </div>
             <?php endif; ?>
         </div>

@@ -81,7 +81,7 @@ php -S localhost:8000 -t public
 - Upload nhiều file trong một lần.
 - Hỗ trợ ảnh, PDF, TXT, CSV, ZIP và một số định dạng Office cơ bản.
 - Kiểm tra MIME thật và dung lượng từng file.
-- Quota dung lượng theo user.
+- Quota dung lượng theo user. Tài khoản admin dùng `storage_limit = NULL` để biểu thị không giới hạn.
 - Tạo thumbnail cho file ảnh nếu server có extension `gd`.
 - Xem file trực tiếp qua `view.php` nếu trình duyệt hỗ trợ MIME tương ứng.
 - Link public trực tiếp bằng token.

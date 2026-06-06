@@ -374,7 +374,7 @@ class FileModel
 
         $incomingSize = array_sum(array_map(fn (array $file): int => (int) ($file['size'] ?? 0), $files));
         $used = UserModel::storageUsed((int) $user['id']);
-        $limit = (int) $user['storage_limit'];
+        $limit = $user['storage_limit'] === null ? 0 : (int) $user['storage_limit'];
 
         if ($limit > 0 && ($used + $incomingSize) > $limit) {
             throw new RuntimeException('This account has exceeded its storage quota.');

@@ -30,7 +30,7 @@ use Src\Core\Csrf;
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Storage Quota (MB)</label>
-                        <input class="form-control" type="number" name="storage_limit_mb" min="0" value="500" required>
+                        <input class="form-control" type="number" name="storage_limit_mb" min="1" value="500" required>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary" type="submit">Create</button>

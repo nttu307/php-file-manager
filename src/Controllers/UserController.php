@@ -33,7 +33,7 @@ class UserController
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $role = ($_POST['role'] ?? '') === 'admin' ? 'admin' : 'user';
-        $storageLimit = $role === 'admin' ? 0 : max(0, (int) ($_POST['storage_limit_mb'] ?? 500)) * 1024 * 1024;
+        $storageLimit = $role === 'admin' ? null : max(1, (int) ($_POST['storage_limit_mb'] ?? 500)) * 1024 * 1024;
 
         if ($name === '' || $email === '' || strlen($password) < 6) {
             Helpers::flash('danger', 'Please fill in all fields. Password must be at least 6 characters.');
@@ -83,7 +83,7 @@ class UserController
         $email = trim($_POST['email'] ?? '');
         $role = ($_POST['role'] ?? '') === 'admin' ? 'admin' : 'user';
         $status = ($_POST['status'] ?? '') === 'locked' ? 'locked' : 'active';
-        $storageLimit = $role === 'admin' ? 0 : max(0, (int) ($_POST['storage_limit_mb'] ?? 500)) * 1024 * 1024;
+        $storageLimit = $role === 'admin' ? null : max(1, (int) ($_POST['storage_limit_mb'] ?? 500)) * 1024 * 1024;
 
         if ($id === (int) Auth::user()['id'] && $status === 'locked') {
             Helpers::flash('danger', 'You cannot lock the account currently in use.');

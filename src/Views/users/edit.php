@@ -37,7 +37,7 @@ use Src\Core\Helpers;
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Storage Quota (MB)</label>
-                        <input class="form-control" type="number" name="storage_limit_mb" min="0" value="<?= (int) round(((int) $item['storage_limit']) / 1024 / 1024) ?>" required>
+                        <input class="form-control" type="number" name="storage_limit_mb" min="1" value="<?= (int) round(((int) ($item['storage_limit'] ?? 524288000)) / 1024 / 1024) ?>" required>
                         <div class="form-text">
                             Used <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?>.
                             Admin accounts are not limited by quota.

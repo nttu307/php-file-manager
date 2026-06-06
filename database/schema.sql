@@ -15,7 +15,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
     status ENUM('active', 'locked') NOT NULL DEFAULT 'active',
-    storage_limit BIGINT UNSIGNED NOT NULL DEFAULT 524288000,
+    storage_limit BIGINT UNSIGNED NULL DEFAULT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NULL,
     UNIQUE KEY uq_users_email (email),
