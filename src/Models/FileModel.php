@@ -33,23 +33,15 @@ class FileModel
 
     public static function findDeletedById(int $id): ?array
     {
-        $stmt = Database::connection()->prepare('SELECT files.*, users.name AS owner_name FROM files JOIN users ON users.id = files.user_id WHERE files.id = ? AND files.deleted_at IS NOT NULL LIMIT 1');
-        $stmt->execute([$id]);
+        $stmt = Database::connection()->prepare('SELECT files.*, users.name AS owner_name FROM files JOIN users ON users.id = files.user_id WHERE files.id = ? AND files.user_id = ? AND files.deleted_at IS NOT NULL LIMIT 1');
+        $stmt->execute([$id, (int) Auth::user()['id']]);
         return $stmt->fetch() ?: null;
     }
 
     public static function deletedCountForCurrentUser(): int
     {
-        $where = ['deleted_at IS NOT NULL'];
-        $params = [];
-
-        if (!Auth::isAdmin()) {
-            $where[] = 'user_id = ?';
-            $params[] = (int) Auth::user()['id'];
-        }
-
-        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM files WHERE ' . implode(' AND ', $where));
-        $stmt->execute($params);
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM files WHERE user_id = ? AND deleted_at IS NOT NULL');
+        $stmt->execute([(int) Auth::user()['id']]);
 
         return (int) $stmt->fetchColumn();
     }
@@ -228,13 +220,8 @@ class FileModel
     {
         $user = Auth::user();
         $offset = max(0, ($page - 1) * $perPage);
-        $where = ['files.deleted_at IS NOT NULL'];
-        $params = [];
-
-        if (!Auth::isAdmin()) {
-            $where[] = 'files.user_id = ?';
-            $params[] = (int) $user['id'];
-        }
+        $where = ['files.deleted_at IS NOT NULL', 'files.user_id = ?'];
+        $params = [(int) $user['id']];
 
         $whereSql = implode(' AND ', $where);
         $countStmt = Database::connection()->prepare("SELECT COUNT(*) FROM files WHERE {$whereSql}");
@@ -257,13 +244,8 @@ class FileModel
 
     public static function allDeletedForCurrentUser(): array
     {
-        $where = ['files.deleted_at IS NOT NULL'];
-        $params = [];
-
-        if (!Auth::isAdmin()) {
-            $where[] = 'files.user_id = ?';
-            $params[] = (int) Auth::user()['id'];
-        }
+        $where = ['files.deleted_at IS NOT NULL', 'files.user_id = ?'];
+        $params = [(int) Auth::user()['id']];
 
         $whereSql = implode(' AND ', $where);
         $stmt = Database::connection()->prepare("SELECT files.*, users.name AS owner_name FROM files JOIN users ON users.id = files.user_id WHERE {$whereSql}");
