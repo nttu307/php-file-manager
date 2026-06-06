@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.*
+.env copy.example
+!.env.example
+
+# Runtime storage
+storage/uploads/*
+storage/thumbnails/*
+storage/temp/*
+!storage/uploads/.gitkeep
+!storage/thumbnails/.gitkeep
+!storage/temp/.gitkeep
+
+# Logs and caches
+*.log
+*.cache
+
+# Dependencies
+vendor/
+node_modules/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
