@@ -294,9 +294,6 @@ class FileModel
 
         Database::connection()->beginTransaction();
         try {
-            $stmt = Database::connection()->prepare('DELETE FROM activity_logs WHERE file_id = ?');
-            $stmt->execute([$file['id']]);
-
             $stmt = Database::connection()->prepare('DELETE FROM files WHERE id = ?');
             $stmt->execute([$file['id']]);
 
