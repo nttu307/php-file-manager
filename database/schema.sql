@@ -24,7 +24,7 @@ CREATE TABLE users (
     INDEX idx_users_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Uploaded image metadata. Physical files live in storage/uploads.
+-- Uploaded file metadata. Physical files live in storage/uploads.
 CREATE TABLE files (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id INT UNSIGNED NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE files (
     stored_name VARCHAR(255) NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
     extension VARCHAR(20) NOT NULL,
-    file_type VARCHAR(50) NOT NULL DEFAULT 'image',
+    file_type VARCHAR(50) NOT NULL DEFAULT 'file',
     size BIGINT UNSIGNED NOT NULL,
     path VARCHAR(500) NOT NULL,
     thumbnail_path VARCHAR(500) NULL,

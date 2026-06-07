@@ -66,6 +66,11 @@ class FileModel
             $params[] = '%' . $filters['q'] . '%';
         }
 
+        if (!empty($filters['file_type'])) {
+            $where[] = 'files.file_type = ?';
+            $params[] = $filters['file_type'];
+        }
+
         if (!empty($filters['from'])) {
             $fromTimestamp = strtotime($filters['from'] . ' 00:00:00');
             if ($fromTimestamp !== false) {
@@ -116,6 +121,7 @@ class FileModel
         }
 
         self::ensureStorageQuota($files);
+        StorageService::ensureDiskSpaceFor(self::incomingSize($files));
 
         $created = [];
         foreach ($files as $file) {
@@ -152,12 +158,19 @@ class FileModel
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mime = $finfo->file($tmpPath);
         $allowed = $config['upload']['allowed_mimes'];
+        $uploadedExtension = strtolower(pathinfo((string) ($uploadedFile['name'] ?? ''), PATHINFO_EXTENSION));
 
-        if (!isset($allowed[$mime])) {
+        if (in_array($uploadedExtension, $config['upload']['blocked_extensions'] ?? [], true)) {
+            throw new RuntimeException('This file extension is not allowed.');
+        }
+
+        $fileMeta = self::resolveAllowedFileMeta($mime, $uploadedExtension, $allowed);
+
+        if (!$fileMeta) {
             throw new RuntimeException('This file type is not allowed.');
         }
 
-        $fileMeta = $allowed[$mime];
+        $mime = $fileMeta['mime'];
         $fileType = $fileMeta['type'];
 
         if ($fileType === 'image' && !getimagesize($tmpPath)) {
@@ -166,24 +179,25 @@ class FileModel
 
         if ($checkQuota) {
             self::ensureStorageQuota([$uploadedFile]);
+            StorageService::ensureDiskSpaceFor(self::incomingSize([$uploadedFile]));
         }
 
+        $user = Auth::user();
         $extension = $fileMeta['extension'];
         $originalName = StorageService::safeDownloadName($uploadedFile['name'], 'upload.' . $extension);
         $storedName = bin2hex(random_bytes(20)) . '.' . $extension;
-        $destination = StorageService::uploadPath($storedName);
+        $storageSubdir = self::storageSubdir((int) $user['id']);
+        $destination = StorageService::uploadPath($storedName, $storageSubdir);
 
         if (!move_uploaded_file($tmpPath, $destination)) {
             throw new RuntimeException('Could not save the uploaded file.');
         }
 
         $thumbnailPath = $fileType === 'image'
-            ? ThumbnailService::create($destination, $mime, $storedName)
+            ? ThumbnailService::create($destination, $mime, $storedName, $storageSubdir)
             : null;
-
-        $user = Auth::user();
-        $stmt = Database::connection()->prepare('INSERT INTO files (user_id, original_name, stored_name, mime_type, extension, file_type, size, path, thumbnail_path, public_token, visibility, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "public", UNIX_TIMESTAMP())');
-        $stmt->execute([
+        $columns = ['user_id', 'original_name', 'stored_name', 'mime_type', 'extension', 'file_type', 'size', 'path', 'thumbnail_path'];
+        $values = [
             $user['id'],
             $originalName,
             $storedName,
@@ -193,8 +207,16 @@ class FileModel
             (int) $uploadedFile['size'],
             $destination,
             $thumbnailPath,
-            bin2hex(random_bytes(24)),
-        ]);
+        ];
+
+        $columns = array_merge($columns, ['public_token', 'visibility', 'created_at']);
+        $values[] = bin2hex(random_bytes(24));
+
+        $placeholders = implode(', ', array_fill(0, count($values), '?'));
+        $stmt = Database::connection()->prepare(
+            'INSERT INTO files (' . implode(', ', $columns) . ') VALUES (' . $placeholders . ', "public", UNIX_TIMESTAMP())'
+        );
+        $stmt->execute($values);
 
         $fileId = (int) Database::connection()->lastInsertId();
         ActivityLog::create('upload', $fileId);
@@ -366,6 +388,59 @@ class FileModel
         return $files;
     }
 
+    private static function resolveAllowedFileMeta(string $mime, string $uploadedExtension, array $allowed): ?array
+    {
+        $uploadedExtension = strtolower(ltrim($uploadedExtension, '.'));
+        $extensionMeta = self::allowedExtensionMeta($uploadedExtension, $allowed);
+
+        if ($extensionMeta && self::isAmbiguousMime($mime)) {
+            return $extensionMeta;
+        }
+
+        if (isset($allowed[$mime])) {
+            return [
+                'mime' => $mime,
+                'extension' => $allowed[$mime]['extension'],
+                'type' => $allowed[$mime]['type'],
+            ];
+        }
+
+        return null;
+    }
+
+    private static function allowedExtensionMeta(string $extension, array $allowed): ?array
+    {
+        if ($extension === '') {
+            return null;
+        }
+
+        foreach ($allowed as $mime => $meta) {
+            if (strtolower((string) ($meta['extension'] ?? '')) === $extension) {
+                return [
+                    'mime' => $mime,
+                    'extension' => $extension,
+                    'type' => $meta['type'],
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private static function isAmbiguousMime(string $mime): bool
+    {
+        return in_array($mime, [
+            'application/octet-stream',
+            'application/zip',
+            'application/x-zip',
+            'application/x-zip-compressed',
+            'application/x-ole-storage',
+            'application/vnd.ms-office',
+            'application/vnd.ms-excel',
+            'text/plain',
+        ], true);
+    }
+
     private static function ensureStorageQuota(array $files): void
     {
         $user = Auth::user();
@@ -373,13 +448,29 @@ class FileModel
             return;
         }
 
-        $incomingSize = array_sum(array_map(fn (array $file): int => (int) ($file['size'] ?? 0), $files));
+        $incomingSize = self::incomingSize($files);
         $used = UserModel::storageUsed((int) $user['id']);
         $limit = $user['storage_limit'] === null ? 0 : (int) $user['storage_limit'];
 
         if ($limit > 0 && ($used + $incomingSize) > $limit) {
             throw new RuntimeException('This account has exceeded its storage quota.');
         }
+    }
+
+    private static function incomingSize(array $files): int
+    {
+        return array_sum(array_map(fn (array $file): int => (int) ($file['size'] ?? 0), $files));
+    }
+
+    private static function storageSubdir(int $userId): string
+    {
+        return implode(DIRECTORY_SEPARATOR, [
+            'users',
+            (string) $userId,
+            date('Y'),
+            date('m'),
+            date('d'),
+        ]);
     }
 
 }

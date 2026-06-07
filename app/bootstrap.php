@@ -31,6 +31,7 @@ require dirname(__DIR__) . '/src/Core/View.php';
 require dirname(__DIR__) . '/src/Services/MailService.php';
 require dirname(__DIR__) . '/src/Services/StorageService.php';
 require dirname(__DIR__) . '/src/Services/ThumbnailService.php';
+require dirname(__DIR__) . '/src/Services/OnlyOfficeService.php';
 require dirname(__DIR__) . '/src/Models/ActivityLog.php';
 require dirname(__DIR__) . '/src/Models/ActivityLogModel.php';
 require dirname(__DIR__) . '/src/Models/FileModel.php';

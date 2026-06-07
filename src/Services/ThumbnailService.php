@@ -4,7 +4,7 @@ namespace Src\Services;
 
 class ThumbnailService
 {
-    public static function create(string $sourcePath, string $mime, string $storedName): ?string
+    public static function create(string $sourcePath, string $mime, string $storedName, string $subdir = ''): ?string
     {
         if (!extension_loaded('gd')) {
             return null;
@@ -34,7 +34,7 @@ class ThumbnailService
         imagesavealpha($thumb, true);
         imagecopyresampled($thumb, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-        $thumbnailPath = StorageService::thumbnailPath($storedName);
+        $thumbnailPath = StorageService::thumbnailPath($storedName, $subdir);
         match ($mime) {
             'image/jpeg' => imagejpeg($thumb, $thumbnailPath, 82),
             'image/png' => imagepng($thumb, $thumbnailPath, 7),

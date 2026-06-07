@@ -2,6 +2,10 @@
 
 use Src\Core\Csrf;
 use Src\Core\Helpers;
+
+$assignableQuota = (int) ($assignableQuota ?? 0);
+$assignableQuotaMb = max(1, (int) floor($assignableQuota / 1024 / 1024));
+$currentQuotaMb = (int) round(((int) ($item['storage_limit'] ?? 524288000)) / 1024 / 1024);
 ?>
 <div class="row g-4">
     <div class="col-lg-7">
@@ -37,9 +41,10 @@ use Src\Core\Helpers;
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Storage Quota (MB)</label>
-                        <input class="form-control" type="number" name="storage_limit_mb" min="1" value="<?= (int) round(((int) ($item['storage_limit'] ?? 524288000)) / 1024 / 1024) ?>" required>
+                        <input class="form-control" type="number" name="storage_limit_mb" min="1" max="<?= (int) $assignableQuotaMb ?>" value="<?= (int) $currentQuotaMb ?>" required>
                         <div class="form-text">
                             Used <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?>.
+                            Remaining assignable storage: <?= Helpers::e(Helpers::formatBytes($assignableQuota)) ?>.
                             Admin accounts are not limited by quota.
                         </div>
                     </div>

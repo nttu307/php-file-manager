@@ -9,6 +9,7 @@ use Src\Core\Helpers;
 use Src\Core\View;
 use Src\Models\ActivityLog;
 use Src\Models\UserModel;
+use Src\Services\StorageService;
 
 class UserController
 {
@@ -21,7 +22,9 @@ class UserController
     public function create(): void
     {
         Auth::requireAdmin();
-        View::render('users/create');
+        View::render('users/create', [
+            'assignableQuota' => $this->assignableQuotaBytes(),
+        ]);
     }
 
     public function store(): void
@@ -37,6 +40,11 @@ class UserController
 
         if ($name === '' || $email === '' || strlen($password) < 6) {
             Helpers::flash('danger', 'Please fill in all fields. Password must be at least 6 characters.');
+            Helpers::redirect('/user_create.php');
+        }
+
+        if ($storageLimit !== null && $storageLimit > $this->assignableQuotaBytes()) {
+            Helpers::flash('danger', 'Storage quota exceeds the currently assignable storage.');
             Helpers::redirect('/user_create.php');
         }
 
@@ -64,6 +72,7 @@ class UserController
         View::render('users/edit', [
             'item' => $user,
             'storageUsed' => UserModel::storageUsed((int) $user['id']),
+            'assignableQuota' => $this->assignableQuotaBytes($user),
         ]);
     }
 
@@ -92,6 +101,11 @@ class UserController
 
         if ($name === '' || $email === '') {
             Helpers::flash('danger', 'Please enter a name and email.');
+            Helpers::redirect('/user_edit.php?id=' . $id);
+        }
+
+        if ($storageLimit !== null && $storageLimit > $this->assignableQuotaBytes($user)) {
+            Helpers::flash('danger', 'Storage quota exceeds the currently assignable storage.');
             Helpers::redirect('/user_edit.php?id=' . $id);
         }
 
@@ -128,5 +142,15 @@ class UserController
         ActivityLog::create('user_password_update');
         Helpers::flash('success', 'User password updated successfully.');
         Helpers::redirect('/user_edit.php?id=' . $id);
+    }
+
+    private function assignableQuotaBytes(array $currentUser = null): int
+    {
+        $currentLimit = 0;
+        if ($currentUser && ($currentUser['role'] ?? '') !== 'admin') {
+            $currentLimit = (int) ($currentUser['storage_limit'] ?? 0);
+        }
+
+        return StorageService::diskStats()['usable'] + $currentLimit;
     }
 }

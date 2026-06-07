@@ -3,6 +3,7 @@
 use Src\Core\Csrf;
 use Src\Core\Auth;
 use Src\Core\Helpers;
+use Src\Services\OnlyOfficeService;
 use Src\Services\StorageService;
 
 $currentUser = Auth::user();
@@ -17,6 +18,27 @@ $fileTypeIcons = [
     'video' => 'bi-file-earmark-play',
     'font' => 'bi-file-earmark-font',
 ];
+$fileTypes = $fileTypes ?? [];
+$uploadAccept = $uploadAccept ?? '';
+$storageLimit = (int) ($currentUser['storage_limit'] ?? 0);
+$storagePercent = $storageLimit > 0 ? min(100, (int) round(((int) $storageUsed / $storageLimit) * 100)) : 0;
+$storageStatusClass = $storagePercent >= 90 ? 'is-danger' : ($storagePercent >= 75 ? 'is-warning' : 'is-good');
+$diskStats = $diskStats ?? null;
+$diskTotal = (int) ($diskStats['total'] ?? 0);
+$diskUsable = (int) ($diskStats['usable'] ?? 0);
+$diskUsablePercent = $diskTotal > 0 ? max(0, min(100, (int) round(($diskUsable / $diskTotal) * 100))) : 0;
+$diskStatusClass = $diskUsablePercent <= 10 ? 'is-danger' : ($diskUsablePercent <= 25 ? 'is-warning' : 'is-good');
+
+$canPreviewFile = function (array $file): bool {
+    $mime = (string) ($file['mime_type'] ?? '');
+
+    return $mime === 'application/pdf'
+        || $mime === 'text/plain'
+        || str_starts_with($mime, 'image/')
+        || str_starts_with($mime, 'audio/')
+        || str_starts_with($mime, 'video/')
+        || (OnlyOfficeService::isConfigured() && OnlyOfficeService::isOfficeFile($file));
+};
 ?>
 <div class="page-heading mb-3">
     <div>
@@ -24,17 +46,34 @@ $fileTypeIcons = [
         <div class="text-muted small"><?= (int) $total ?> file</div>
     </div>
     <?php if ($currentUser): ?>
-        <div class="text-end">
+        <div class="storage-summary">
             <div class="text-muted small">Storage Used</div>
             <?php if ($currentUser['role'] === 'admin'): ?>
-                <div class="fw-semibold"><?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> total</div>
-                <div class="text-muted small">Admin quota: Unlimited</div>
+                <div class="fw-semibold"><?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> admin used</div>
+                <div class="text-muted small"><?= Helpers::e(Helpers::formatBytes($diskUsable)) ?> disk available</div>
+                <div
+                    class="storage-status-line <?= Helpers::e($diskStatusClass) ?>"
+                    role="meter"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="<?= (int) $diskUsablePercent ?>"
+                    aria-label="Available disk storage"
+                >
+                    <span style="width: <?= (int) $diskUsablePercent ?>%;"></span>
+                </div>
             <?php else: ?>
                 <div class="fw-semibold">
-                    <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> / <?= Helpers::e(Helpers::formatBytes((int) ($currentUser['storage_limit'] ?? 0))) ?>
+                    <?= Helpers::e(Helpers::formatBytes((int) $storageUsed)) ?> / <?= Helpers::e($storageLimit > 0 ? Helpers::formatBytes($storageLimit) : 'Unlimited') ?>
                 </div>
-                <div class="text-muted small">
-                    <?= (int) round(((int) $storageUsed) / 1024 / 1024) ?> / <?= (int) round(((int) ($currentUser['storage_limit'] ?? 0)) / 1024 / 1024) ?> MB
+                <div
+                    class="storage-status-line <?= Helpers::e($storageStatusClass) ?>"
+                    role="meter"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="<?= (int) $storagePercent ?>"
+                    aria-label="Storage usage"
+                >
+                    <span style="width: <?= (int) $storagePercent ?>%;"></span>
                 </div>
             <?php endif; ?>
         </div>
@@ -47,7 +86,7 @@ $fileTypeIcons = [
             <?= Csrf::field() ?>
             <div class="upload-field">
                 <label class="form-label">Upload Files</label>
-                <input id="image-upload-input" class="form-control" type="file" name="images[]" multiple required>
+                <input id="file-upload-input" class="form-control" type="file" name="files[]" accept="<?= Helpers::e($uploadAccept) ?>" multiple required>
                 <div class="form-text">You can select multiple files in one upload.</div>
             </div>
             <div class="upload-submit">
@@ -66,12 +105,23 @@ $fileTypeIcons = [
 <div class="card mb-4">
     <div class="card-body">
         <form class="row g-3 align-items-end" method="get" action="/files.php">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Search File Name</label>
                 <input class="form-control" name="q" value="<?= Helpers::e($filters['q'] ?? '') ?>">
             </div>
+            <div class="col-md-2">
+                <label class="form-label">File Type</label>
+                <select class="form-select" name="file_type">
+                    <option value="">All</option>
+                    <?php foreach ($fileTypes as $fileType): ?>
+                        <option value="<?= Helpers::e($fileType) ?>" <?= ($filters['file_type'] ?? '') === $fileType ? 'selected' : '' ?>>
+                            <?= Helpers::e(ucfirst($fileType)) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <?php if (Auth::isAdmin()): ?>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">User</label>
                     <select class="form-select" name="user_id">
                         <option value="0">All</option>
@@ -122,6 +172,7 @@ $fileTypeIcons = [
                 <?php $directUrl = Helpers::appUrl('/view.php?token=' . $file['public_token']); ?>
                 <?php $displayName = StorageService::safeDownloadName($file['original_name'], 'file'); ?>
                 <?php $displayType = $file['file_type'] ?? (str_starts_with($file['mime_type'] ?? '', 'image/') ? 'image' : 'file'); ?>
+                <?php $canPreview = $canPreviewFile($file); ?>
                 <tr>
                     <td><input class="form-check-input" type="checkbox" name="ids[]" value="<?= (int) $file['id'] ?>"></td>
                     <td>
@@ -148,9 +199,34 @@ $fileTypeIcons = [
                     <td><?= Helpers::e(Helpers::formatDateTime($file['created_at'])) ?></td>
                     <td class="table-actions text-end">
                         <div class="compact-actions justify-content-end">
-                            <a class="compact-action text-primary" href="/view.php?id=<?= (int) $file['id'] ?>" target="_blank" data-bs-toggle="tooltip" data-bs-title="View image">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                            <?php if ($canPreview): ?>
+                                <button
+                                    class="compact-action text-primary"
+                                    type="button"
+                                    data-preview-file
+                                    data-file-name="<?= Helpers::e($displayName) ?>"
+                                    data-file-type="<?= Helpers::e($displayType) ?>"
+                                    data-file-mime="<?= Helpers::e($file['mime_type'] ?? '') ?>"
+                                    data-view-url="/view.php?id=<?= (int) $file['id'] ?>"
+                                    data-download-url="/download.php?id=<?= (int) $file['id'] ?>"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="View file"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            <?php else: ?>
+                                <button
+                                    class="compact-action text-primary"
+                                    type="button"
+                                    data-unpreviewable-file
+                                    data-file-name="<?= Helpers::e($displayName) ?>"
+                                    data-download-url="/download.php?id=<?= (int) $file['id'] ?>"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="View file"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            <?php endif; ?>
                             <a class="compact-action" href="/download.php?id=<?= (int) $file['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Download original">
                                 <i class="bi bi-download"></i>
                             </a>
@@ -212,7 +288,141 @@ $fileTypeIcons = [
 
 <form id="bulk-zip-form" method="post" action="/zip_selected.php"><?= Csrf::field() ?></form>
 <form id="bulk-delete-form" method="post" action="/delete_selected.php"><?= Csrf::field() ?></form>
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filePreviewTitle">Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="filePreviewBody" class="file-preview-body"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <a id="filePreviewDownload" class="btn btn-primary" href="#">
+                    <i class="bi bi-download"></i>
+                    <span>Download</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="unpreviewableFileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cannot Preview File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="fw-semibold mb-1" id="unpreviewableFileName"></div>
+                <div class="text-muted">This file type cannot be viewed directly. Please download it to open with a compatible application.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a id="unpreviewableFileDownload" class="btn btn-primary" href="#">
+                    <i class="bi bi-download"></i>
+                    <span>Download</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const previewModalElement = document.getElementById('filePreviewModal');
+    const previewModal = previewModalElement ? new bootstrap.Modal(previewModalElement) : null;
+    const previewTitle = document.getElementById('filePreviewTitle');
+    const previewBody = document.getElementById('filePreviewBody');
+    const previewDownload = document.getElementById('filePreviewDownload');
+
+    function clearPreviewBody() {
+        if (previewBody) {
+            previewBody.innerHTML = '';
+        }
+    }
+
+    function buildPreviewElement(button) {
+        const mime = button.dataset.fileMime || '';
+        const type = button.dataset.fileType || '';
+        const viewUrl = button.dataset.viewUrl || '#';
+
+        if (mime.startsWith('image/')) {
+            const image = document.createElement('img');
+            image.className = 'file-preview-image';
+            image.src = viewUrl;
+            image.alt = button.dataset.fileName || 'Preview';
+            return image;
+        }
+
+        if (mime.startsWith('audio/')) {
+            const audio = document.createElement('audio');
+            audio.className = 'file-preview-media';
+            audio.src = viewUrl;
+            audio.controls = true;
+            audio.preload = 'metadata';
+            return audio;
+        }
+
+        if (mime.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.className = 'file-preview-media';
+            video.src = viewUrl;
+            video.controls = true;
+            video.preload = 'metadata';
+            return video;
+        }
+
+        if (mime === 'application/pdf' || mime === 'text/plain' || type === 'document') {
+            const iframe = document.createElement('iframe');
+            iframe.className = 'file-preview-frame';
+            iframe.src = viewUrl;
+            iframe.title = button.dataset.fileName || 'Preview';
+            return iframe;
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'file-preview-frame';
+        iframe.src = viewUrl;
+        iframe.title = button.dataset.fileName || 'Preview';
+        return iframe;
+    }
+
+    document.querySelectorAll('[data-preview-file]').forEach((button) => {
+        button.addEventListener('click', () => {
+            clearPreviewBody();
+            if (previewTitle) {
+                previewTitle.textContent = button.dataset.fileName || 'Preview';
+            }
+            if (previewDownload) {
+                previewDownload.href = button.dataset.downloadUrl || '#';
+            }
+            previewBody?.appendChild(buildPreviewElement(button));
+            previewModal?.show();
+        });
+    });
+
+    previewModalElement?.addEventListener('hidden.bs.modal', clearPreviewBody);
+
+    const unpreviewableModalElement = document.getElementById('unpreviewableFileModal');
+    const unpreviewableModal = unpreviewableModalElement ? new bootstrap.Modal(unpreviewableModalElement) : null;
+    const unpreviewableFileName = document.getElementById('unpreviewableFileName');
+    const unpreviewableFileDownload = document.getElementById('unpreviewableFileDownload');
+
+    document.querySelectorAll('[data-unpreviewable-file]').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (unpreviewableFileName) {
+                unpreviewableFileName.textContent = button.dataset.fileName || 'Selected file';
+            }
+            if (unpreviewableFileDownload) {
+                unpreviewableFileDownload.href = button.dataset.downloadUrl || '#';
+            }
+            unpreviewableModal?.show();
+        });
+    });
+});
+
 document.querySelectorAll('input[name="ids[]"]').forEach((checkbox) => {
     checkbox.addEventListener('change', () => {
         document.querySelectorAll('#bulk-zip-form input[name="ids[]"], #bulk-delete-form input[name="ids[]"], #bulk-zip-form input[name="csrf_token"], #bulk-delete-form input[name="csrf_token"]').forEach((input) => input.remove());
@@ -255,7 +465,7 @@ document.getElementById('clear-all-files')?.addEventListener('click', () => {
     syncBulkForms();
 });
 
-const uploadInput = document.getElementById('image-upload-input');
+const uploadInput = document.getElementById('file-upload-input');
 const preview = document.getElementById('upload-preview');
 let selectedUploadFiles = [];
 
