@@ -29,8 +29,9 @@ class AuthController
 
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
+        $remember = ($_POST['remember'] ?? '') === '1';
 
-        if (Auth::attempt($email, $password)) {
+        if (Auth::attempt($email, $password, $remember)) {
             ActivityLog::create('login');
             Helpers::redirect('/files.php');
         }

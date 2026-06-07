@@ -20,6 +20,8 @@ $fileTypeIcons = [
 ];
 $fileTypes = $fileTypes ?? [];
 $uploadAccept = $uploadAccept ?? '';
+$uploadMaxSize = (int) ($uploadMaxSize ?? 0);
+$uploadMaxSizeLabel = $uploadMaxSize > 0 ? Helpers::formatBytes($uploadMaxSize) : '';
 $storageLimit = (int) ($currentUser['storage_limit'] ?? 0);
 $storagePercent = $storageLimit > 0 ? min(100, (int) round(((int) $storageUsed / $storageLimit) * 100)) : 0;
 $storageStatusClass = $storagePercent >= 90 ? 'is-danger' : ($storagePercent >= 75 ? 'is-warning' : 'is-good');
@@ -28,6 +30,9 @@ $diskTotal = (int) ($diskStats['total'] ?? 0);
 $diskUsable = (int) ($diskStats['usable'] ?? 0);
 $diskUsablePercent = $diskTotal > 0 ? max(0, min(100, (int) round(($diskUsable / $diskTotal) * 100))) : 0;
 $diskStatusClass = $diskUsablePercent <= 10 ? 'is-danger' : ($diskUsablePercent <= 25 ? 'is-warning' : 'is-good');
+$canDeleteAnyFile = $currentUser
+    ? count(array_filter($files ?? [], fn (array $file): bool => (int) $file['user_id'] === (int) $currentUser['id'])) > 0
+    : false;
 
 $canPreviewFile = function (array $file): bool {
     $mime = (string) ($file['mime_type'] ?? '');
@@ -86,14 +91,37 @@ $canPreviewFile = function (array $file): bool {
             <?= Csrf::field() ?>
             <div class="upload-field">
                 <label class="form-label">Upload Files</label>
-                <input id="file-upload-input" class="form-control" type="file" name="files[]" accept="<?= Helpers::e($uploadAccept) ?>" multiple required>
-                <div class="form-text">You can select multiple files in one upload.</div>
+                <label
+                    id="upload-drop-zone"
+                    class="upload-drop-zone"
+                    for="file-upload-input"
+                    data-max-size="<?= (int) $uploadMaxSize ?>"
+                    data-max-size-label="<?= Helpers::e($uploadMaxSizeLabel) ?>"
+                >
+                    <input id="file-upload-input" class="visually-hidden" type="file" name="files[]" accept="<?= Helpers::e($uploadAccept) ?>" multiple required>
+                    <span class="upload-drop-icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                    <span class="upload-drop-title">Drop files here or choose files</span>
+                    <span class="upload-drop-meta">
+                        Multiple files are supported<?= $uploadMaxSize > 0 ? '. Max ' . Helpers::e($uploadMaxSizeLabel) . ' per file.' : '.' ?>
+                    </span>
+                </label>
             </div>
             <div class="upload-submit">
-                <button class="btn btn-primary" type="submit">
+                <button id="upload-submit-button" class="btn btn-primary" type="submit">
                     <i class="bi bi-cloud-arrow-up"></i>
                     <span>Upload</span>
                 </button>
+            </div>
+            <div class="upload-progress-slot">
+                <div id="upload-progress" class="upload-progress" hidden>
+                    <div class="upload-progress-meta">
+                        <span id="upload-progress-label">Uploading</span>
+                        <span id="upload-progress-percent">0%</span>
+                    </div>
+                    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div id="upload-progress-bar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
             </div>
             <div class="upload-preview-slot">
                 <div id="upload-preview" class="upload-preview-grid"></div>
@@ -160,19 +188,21 @@ $canPreviewFile = function (array $file): bool {
                 <th>Type</th>
                 <th>Owner</th>
                 <th>Size</th>
-                <th>Uploaded At</th>
                 <th class="text-end">Actions</th>
             </tr>
             </thead>
             <tbody>
             <?php if (!$files): ?>
-                <tr><td colspan="8" class="text-center text-muted py-5">No files found.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-5">No files found.</td></tr>
             <?php endif; ?>
             <?php foreach ($files as $file): ?>
                 <?php $directUrl = Helpers::appUrl('/view.php?token=' . $file['public_token']); ?>
                 <?php $displayName = StorageService::safeDownloadName($file['original_name'], 'file'); ?>
                 <?php $displayType = $file['file_type'] ?? (str_starts_with($file['mime_type'] ?? '', 'image/') ? 'image' : 'file'); ?>
                 <?php $canPreview = $canPreviewFile($file); ?>
+                <?php $canDeleteFile = $currentUser && (int) $file['user_id'] === (int) $currentUser['id']; ?>
+                <?php $downloadUrl = '/download.php?id=' . (int) $file['id']; ?>
+                <?php $viewUrl = '/view.php?id=' . (int) $file['id']; ?>
                 <tr>
                     <td><input class="form-check-input" type="checkbox" name="ids[]" value="<?= (int) $file['id'] ?>"></td>
                     <td>
@@ -196,7 +226,6 @@ $canPreviewFile = function (array $file): bool {
                     <td><span class="badge text-bg-light border"><?= Helpers::e($displayType) ?></span></td>
                     <td><?= Helpers::e($file['owner_name']) ?></td>
                     <td><?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?></td>
-                    <td><?= Helpers::e(Helpers::formatDateTime($file['created_at'])) ?></td>
                     <td class="table-actions text-end">
                         <div class="compact-actions justify-content-end">
                             <?php if ($canPreview): ?>
@@ -207,8 +236,8 @@ $canPreviewFile = function (array $file): bool {
                                     data-file-name="<?= Helpers::e($displayName) ?>"
                                     data-file-type="<?= Helpers::e($displayType) ?>"
                                     data-file-mime="<?= Helpers::e($file['mime_type'] ?? '') ?>"
-                                    data-view-url="/view.php?id=<?= (int) $file['id'] ?>"
-                                    data-download-url="/download.php?id=<?= (int) $file['id'] ?>"
+                                    data-view-url="<?= Helpers::e($viewUrl) ?>"
+                                    data-download-url="<?= Helpers::e($downloadUrl) ?>"
                                     data-bs-toggle="tooltip"
                                     data-bs-title="View file"
                                 >
@@ -220,19 +249,31 @@ $canPreviewFile = function (array $file): bool {
                                     type="button"
                                     data-unpreviewable-file
                                     data-file-name="<?= Helpers::e($displayName) ?>"
-                                    data-download-url="/download.php?id=<?= (int) $file['id'] ?>"
+                                    data-download-url="<?= Helpers::e($downloadUrl) ?>"
                                     data-bs-toggle="tooltip"
                                     data-bs-title="View file"
                                 >
                                     <i class="bi bi-eye"></i>
                                 </button>
                             <?php endif; ?>
-                            <a class="compact-action" href="/download.php?id=<?= (int) $file['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Download original">
-                                <i class="bi bi-download"></i>
-                            </a>
-                            <a class="compact-action" href="/zip.php?id=<?= (int) $file['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Download ZIP">
-                                <i class="bi bi-file-zip"></i>
-                            </a>
+                            <button
+                                class="compact-action"
+                                type="button"
+                                data-file-detail
+                                data-file-id="<?= (int) $file['id'] ?>"
+                                data-file-name="<?= Helpers::e($displayName) ?>"
+                                data-file-type="<?= Helpers::e($displayType) ?>"
+                                data-file-extension="<?= Helpers::e($file['extension'] ?? '-') ?>"
+                                data-file-mime="<?= Helpers::e($file['mime_type'] ?? '-') ?>"
+                                data-file-owner="<?= Helpers::e($file['owner_name'] ?? '-') ?>"
+                                data-file-size="<?= Helpers::e(Helpers::formatBytes((int) $file['size'])) ?>"
+                                data-file-uploaded="<?= Helpers::e(Helpers::formatDateTime($file['created_at'])) ?>"
+                                data-file-visibility="<?= Helpers::e($file['visibility'] ?? '-') ?>"
+                                data-bs-toggle="tooltip"
+                                data-bs-title="File details"
+                            >
+                                <i class="bi bi-info-circle"></i>
+                            </button>
                             <button class="compact-action" type="button" data-copy-text="<?= Helpers::e($directUrl) ?>" data-bs-toggle="tooltip" data-bs-title="Copy link">
                                 <i class="bi bi-link-45deg"></i>
                             </button>
@@ -249,13 +290,31 @@ $canPreviewFile = function (array $file): bool {
                                     <i class="bi <?= $file['visibility'] === 'public' ? 'bi-globe2' : 'bi-lock-fill' ?>"></i>
                                 </button>
                             </form>
-                            <form method="post" action="/delete.php" data-confirm="Move this file to trash?">
-                                <?= Csrf::field() ?>
-                                <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
-                                <button class="compact-action text-danger" type="submit" data-bs-toggle="tooltip" data-bs-title="Move to trash">
+                            <a class="compact-action" href="/download.php?id=<?= (int) $file['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Download original">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <a class="compact-action" href="/zip.php?id=<?= (int) $file['id'] ?>" data-bs-toggle="tooltip" data-bs-title="Download ZIP">
+                                <i class="bi bi-file-zip"></i>
+                            </a>
+                            <?php if ($canDeleteFile): ?>
+                                <form method="post" action="/delete.php" data-confirm="Move this file to trash?">
+                                    <?= Csrf::field() ?>
+                                    <input type="hidden" name="id" value="<?= (int) $file['id'] ?>">
+                                    <button class="compact-action text-danger" type="submit" data-bs-toggle="tooltip" data-bs-title="Move to trash">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <button
+                                    class="compact-action text-danger is-restricted"
+                                    type="button"
+                                    data-delete-denied-file
+                                    data-bs-toggle="tooltip"
+                                    data-bs-title="Cannot delete another user's file"
+                                >
                                     <i class="bi bi-trash"></i>
                                 </button>
-                            </form>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>
@@ -279,15 +338,63 @@ $canPreviewFile = function (array $file): bool {
             <i class="bi bi-file-zip"></i>
             <span>Download ZIP</span>
         </button>
-        <button class="btn btn-outline-danger" type="button" data-confirm-form="bulk-delete-form" data-confirm="Move selected files to trash?">
-            <i class="bi bi-trash"></i>
-            <span>Delete Selected</span>
-        </button>
+        <?php if ($canDeleteAnyFile): ?>
+            <button class="btn btn-outline-danger" type="button" data-confirm-form="bulk-delete-form" data-confirm="Move selected files to trash?">
+                <i class="bi bi-trash"></i>
+                <span>Delete Selected</span>
+            </button>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 
 <form id="bulk-zip-form" method="post" action="/zip_selected.php"><?= Csrf::field() ?></form>
 <form id="bulk-delete-form" method="post" action="/delete_selected.php"><?= Csrf::field() ?></form>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="fileDetailDrawer" aria-labelledby="fileDetailTitle">
+    <div class="offcanvas-header">
+        <h5 id="fileDetailTitle" class="offcanvas-title">File Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="file-detail-list">
+            <div class="file-detail-item">
+                <span>File ID</span>
+                <strong id="detailFileId"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Name</span>
+                <strong id="detailFileName"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Type</span>
+                <strong id="detailFileType"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Extension</span>
+                <strong id="detailFileExtension"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>MIME</span>
+                <strong id="detailFileMime"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Owner</span>
+                <strong id="detailFileOwner"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Size</span>
+                <strong id="detailFileSize"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Uploaded</span>
+                <strong id="detailFileUploaded"></strong>
+            </div>
+            <div class="file-detail-item">
+                <span>Visibility</span>
+                <strong id="detailFileVisibility"></strong>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -329,8 +436,61 @@ $canPreviewFile = function (array $file): bool {
         </div>
     </div>
 </div>
+<div class="modal fade" id="deleteDeniedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cannot Delete File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                You can only delete files uploaded by your own account.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const deleteDeniedModalElement = document.getElementById('deleteDeniedModal');
+    const deleteDeniedModal = deleteDeniedModalElement ? new bootstrap.Modal(deleteDeniedModalElement) : null;
+    document.querySelectorAll('[data-delete-denied-file]').forEach((button) => {
+        button.addEventListener('click', () => {
+            deleteDeniedModal?.show();
+        });
+    });
+
+    const detailDrawerElement = document.getElementById('fileDetailDrawer');
+    const detailDrawer = detailDrawerElement ? new bootstrap.Offcanvas(detailDrawerElement) : null;
+    const detailFields = {
+        id: document.getElementById('detailFileId'),
+        name: document.getElementById('detailFileName'),
+        type: document.getElementById('detailFileType'),
+        extension: document.getElementById('detailFileExtension'),
+        mime: document.getElementById('detailFileMime'),
+        owner: document.getElementById('detailFileOwner'),
+        size: document.getElementById('detailFileSize'),
+        uploaded: document.getElementById('detailFileUploaded'),
+        visibility: document.getElementById('detailFileVisibility'),
+    };
+
+    document.querySelectorAll('[data-file-detail]').forEach((button) => {
+        button.addEventListener('click', () => {
+            detailFields.id.textContent = button.dataset.fileId || '-';
+            detailFields.name.textContent = button.dataset.fileName || '-';
+            detailFields.type.textContent = button.dataset.fileType || '-';
+            detailFields.extension.textContent = button.dataset.fileExtension || '-';
+            detailFields.mime.textContent = button.dataset.fileMime || '-';
+            detailFields.owner.textContent = button.dataset.fileOwner || '-';
+            detailFields.size.textContent = button.dataset.fileSize || '-';
+            detailFields.uploaded.textContent = button.dataset.fileUploaded || '-';
+            detailFields.visibility.textContent = button.dataset.fileVisibility || '-';
+            detailDrawer?.show();
+        });
+    });
+
     const previewModalElement = document.getElementById('filePreviewModal');
     const previewModal = previewModalElement ? new bootstrap.Modal(previewModalElement) : null;
     const previewTitle = document.getElementById('filePreviewTitle');
@@ -466,8 +626,18 @@ document.getElementById('clear-all-files')?.addEventListener('click', () => {
 });
 
 const uploadInput = document.getElementById('file-upload-input');
+const uploadForm = uploadInput?.closest('form');
+const dropZone = document.getElementById('upload-drop-zone');
 const preview = document.getElementById('upload-preview');
+const uploadSubmitButton = document.getElementById('upload-submit-button');
+const uploadProgress = document.getElementById('upload-progress');
+const uploadProgressBar = document.getElementById('upload-progress-bar');
+const uploadProgressPercent = document.getElementById('upload-progress-percent');
+const uploadProgressLabel = document.getElementById('upload-progress-label');
+const uploadMaxSize = Number(dropZone?.dataset.maxSize || 0);
+const uploadMaxSizeLabel = dropZone?.dataset.maxSizeLabel || '';
 let selectedUploadFiles = [];
+let isUploadBusy = false;
 
 function iconForFile(file) {
     if (file.type.startsWith('image/')) return 'bi-file-image';
@@ -516,7 +686,12 @@ function renderUploadPreview() {
         remove.type = 'button';
         remove.className = 'btn btn-sm btn-outline-danger';
         remove.textContent = 'Remove';
+        remove.disabled = isUploadBusy;
         remove.addEventListener('click', () => {
+            if (isUploadBusy) {
+                return;
+            }
+
             selectedUploadFiles.splice(index, 1);
             syncUploadInput();
             renderUploadPreview();
@@ -531,11 +706,213 @@ function renderUploadPreview() {
 
 if (uploadInput && preview) {
     uploadInput.addEventListener('change', () => {
-        selectedUploadFiles = Array.from(uploadInput.files);
+        if (isUploadBusy) {
+            syncUploadInput();
+            return;
+        }
+
+        selectedUploadFiles = mergeUploadFiles(selectedUploadFiles, Array.from(uploadInput.files));
         syncUploadInput();
         renderUploadPreview();
     });
 }
+
+function uploadFileKey(file) {
+    return [file.name, file.size, file.lastModified].join(':');
+}
+
+function mergeUploadFiles(existingFiles, incomingFiles) {
+    const seen = new Set(existingFiles.map(uploadFileKey));
+    const merged = [...existingFiles];
+    const rejected = [];
+
+    incomingFiles.forEach((file) => {
+        if (uploadMaxSize > 0 && file.size > uploadMaxSize) {
+            rejected.push(file);
+            return;
+        }
+
+        const key = uploadFileKey(file);
+        if (!seen.has(key)) {
+            seen.add(key);
+            merged.push(file);
+        }
+    });
+
+    showRejectedUploadFiles(rejected);
+
+    return merged;
+}
+
+function formatClientBytes(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = Number(bytes) || 0;
+
+    for (const unit of units) {
+        if (size < 1024 || unit === 'GB') {
+            return `${size.toFixed(unit === 'B' ? 0 : 2)} ${unit}`;
+        }
+
+        size /= 1024;
+    }
+
+    return `${bytes} B`;
+}
+
+function showRejectedUploadFiles(files) {
+    if (!files.length) {
+        return;
+    }
+
+    const limitText = uploadMaxSizeLabel || formatClientBytes(uploadMaxSize);
+    const names = files.slice(0, 3).map((file) => `${file.name} (${formatClientBytes(file.size)})`).join(', ');
+    const more = files.length > 3 ? ` and ${files.length - 3} more` : '';
+    showClientToast(`Skipped ${files.length} file(s) over ${limitText}: ${names}${more}.`, 'danger');
+}
+
+function setUploadProgress(percent, label = 'Uploading') {
+    const normalized = Math.max(0, Math.min(100, Math.round(percent)));
+    if (uploadProgress) {
+        uploadProgress.hidden = false;
+    }
+    if (uploadProgressLabel) {
+        uploadProgressLabel.textContent = label;
+    }
+    if (uploadProgressPercent) {
+        uploadProgressPercent.textContent = `${normalized}%`;
+    }
+    if (uploadProgressBar) {
+        uploadProgressBar.style.width = `${normalized}%`;
+        uploadProgressBar.parentElement?.setAttribute('aria-valuenow', String(normalized));
+    }
+}
+
+function resetUploadProgress() {
+    if (uploadProgress) {
+        uploadProgress.hidden = true;
+    }
+    if (uploadProgressLabel) {
+        uploadProgressLabel.textContent = 'Uploading';
+    }
+    if (uploadProgressPercent) {
+        uploadProgressPercent.textContent = '0%';
+    }
+    if (uploadProgressBar) {
+        uploadProgressBar.style.width = '0%';
+        uploadProgressBar.parentElement?.setAttribute('aria-valuenow', '0');
+    }
+}
+
+function setUploadBusy(isBusy) {
+    isUploadBusy = isBusy;
+    uploadSubmitButton?.toggleAttribute('disabled', isBusy);
+    uploadInput?.toggleAttribute('disabled', isBusy);
+    dropZone?.classList.toggle('is-disabled', isBusy);
+    preview?.classList.toggle('is-disabled', isBusy);
+    preview?.querySelectorAll('button').forEach((button) => {
+        button.disabled = isBusy;
+    });
+}
+
+dropZone?.addEventListener('dragenter', (event) => {
+    if (isUploadBusy) {
+        return;
+    }
+
+    event.preventDefault();
+    dropZone.classList.add('is-dragover');
+});
+
+dropZone?.addEventListener('dragover', (event) => {
+    if (isUploadBusy) {
+        return;
+    }
+
+    event.preventDefault();
+    dropZone.classList.add('is-dragover');
+});
+
+dropZone?.addEventListener('dragleave', (event) => {
+    if (isUploadBusy) {
+        return;
+    }
+
+    if (!dropZone.contains(event.relatedTarget)) {
+        dropZone.classList.remove('is-dragover');
+    }
+});
+
+dropZone?.addEventListener('drop', (event) => {
+    event.preventDefault();
+    if (isUploadBusy) {
+        return;
+    }
+
+    dropZone.classList.remove('is-dragover');
+    selectedUploadFiles = mergeUploadFiles(selectedUploadFiles, Array.from(event.dataTransfer?.files || []));
+    syncUploadInput();
+    renderUploadPreview();
+});
+
+uploadForm?.addEventListener('submit', (event) => {
+    if (!window.XMLHttpRequest || selectedUploadFiles.length === 0) {
+        return;
+    }
+
+    const oversizedFiles = selectedUploadFiles.filter((file) => uploadMaxSize > 0 && file.size > uploadMaxSize);
+    if (oversizedFiles.length > 0) {
+        event.preventDefault();
+        selectedUploadFiles = selectedUploadFiles.filter((file) => file.size <= uploadMaxSize);
+        showRejectedUploadFiles(oversizedFiles);
+        syncUploadInput();
+        renderUploadPreview();
+        return;
+    }
+
+    event.preventDefault();
+    const formData = new FormData(uploadForm);
+    setUploadBusy(true);
+    setUploadProgress(0, 'Uploading');
+
+    const request = new XMLHttpRequest();
+    request.open('POST', uploadForm.action);
+    request.setRequestHeader('Accept', 'application/json');
+    request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+    request.upload.addEventListener('progress', (progressEvent) => {
+        if (progressEvent.lengthComputable) {
+            setUploadProgress((progressEvent.loaded / progressEvent.total) * 100, 'Uploading');
+        }
+    });
+
+    request.addEventListener('load', () => {
+        let payload = {};
+        try {
+            payload = JSON.parse(request.responseText || '{}');
+        } catch (error) {
+            payload = {};
+        }
+
+        if (request.status >= 200 && request.status < 300 && payload.ok) {
+            setUploadProgress(100, 'Complete');
+            showClientToast(payload.message || 'Upload completed.');
+            window.location.reload();
+            return;
+        }
+
+        showClientToast(payload.message || 'Upload failed.', 'danger');
+        setUploadBusy(false);
+        resetUploadProgress();
+    });
+
+    request.addEventListener('error', () => {
+        showClientToast('Upload failed. Please try again.', 'danger');
+        setUploadBusy(false);
+        resetUploadProgress();
+    });
+
+    request.send(formData);
+});
 </script>
 
 <?= Helpers::pagination('/files.php', $page, $totalPages, $filters ?? []) ?>

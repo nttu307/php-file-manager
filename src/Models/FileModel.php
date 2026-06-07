@@ -316,6 +316,8 @@ class FileModel
 
         Database::connection()->beginTransaction();
         try {
+            ActivityLog::create('force_delete', (int) $file['id']);
+
             $stmt = Database::connection()->prepare('DELETE FROM files WHERE id = ?');
             $stmt->execute([$file['id']]);
 

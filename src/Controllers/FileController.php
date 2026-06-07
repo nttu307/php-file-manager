@@ -57,6 +57,7 @@ class FileController
             'storageUsed' => $storageUsed,
             'diskStats' => Auth::isAdmin() ? StorageService::diskStats() : null,
             'uploadAccept' => $this->uploadAccept(),
+            'uploadMaxSize' => $this->uploadMaxSize(),
             'fileTypes' => $fileTypes,
         ]);
     }
@@ -68,8 +69,21 @@ class FileController
 
         try {
             $created = FileModel::createManyFromUpload($_FILES['files'] ?? $_FILES['images'] ?? []);
+            if ($this->expectsJson()) {
+                $this->json([
+                    'ok' => true,
+                    'message' => 'Uploaded ' . count($created) . ' file(s).',
+                    'count' => count($created),
+                ]);
+            }
             Helpers::flash('success', 'Uploaded ' . count($created) . ' file(s).');
         } catch (Throwable $e) {
+            if ($this->expectsJson()) {
+                $this->json([
+                    'ok' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
             Helpers::flash('danger', $e->getMessage());
         }
 
@@ -94,7 +108,11 @@ class FileController
             exit('File not found.');
         }
 
-        if (!isset($_GET['token']) || $file['visibility'] !== 'public') {
+        if (isset($_GET['token']) && $file['visibility'] !== 'public') {
+            $this->sendPrivateLinkPlaceholder();
+        }
+
+        if (!isset($_GET['token'])) {
             Auth::requireLogin();
             Auth::requireFilePermission($file);
         }
@@ -186,7 +204,11 @@ class FileController
             Helpers::redirect('/files.php');
         }
 
-        Auth::requireFilePermission($file);
+        if (!Auth::canDeleteFile($file)) {
+            Helpers::flash('danger', 'You can only delete files uploaded by your own account.');
+            Helpers::redirect('/files.php');
+        }
+
         FileModel::softDelete($file);
         Helpers::flash('success', 'File moved to trash.');
         Helpers::redirect('/files.php');
@@ -201,6 +223,13 @@ class FileController
         if (!$files) {
             Helpers::flash('danger', 'Please select at least one valid file.');
             Helpers::redirect('/files.php');
+        }
+
+        foreach ($files as $file) {
+            if (!Auth::canDeleteFile($file)) {
+                Helpers::flash('danger', 'You can only delete files uploaded by your own account.');
+                Helpers::redirect('/files.php');
+            }
         }
 
         FileModel::softDeleteMany($files);
@@ -272,7 +301,7 @@ class FileController
             Helpers::redirect('/trash.php');
         }
 
-        Auth::requireFilePermission($file);
+        Auth::requireFileDeletePermission($file);
         FileModel::restore($file);
         Helpers::flash('success', 'File restored successfully.');
         Helpers::redirect('/trash.php');
@@ -289,7 +318,7 @@ class FileController
             Helpers::redirect('/trash.php');
         }
 
-        Auth::requireFilePermission($file);
+        Auth::requireFileDeletePermission($file);
         FileModel::forceDelete($file);
         Helpers::flash('success', 'File permanently deleted.');
         Helpers::redirect('/trash.php');
@@ -439,6 +468,35 @@ class FileController
         exit;
     }
 
+    private function sendPrivateLinkPlaceholder(): void
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Private file">'
+            . '<rect width="1920" height="1080" fill="#f4f7fb"/>'
+            . '<path d="M0 780h1920v300H0z" fill="#eef3f9"/>'
+            . '<path d="M280 184h1360" stroke="#d9e2ef" stroke-width="2" stroke-linecap="round" opacity=".75"/>'
+            . '<path d="M280 896h1360" stroke="#d9e2ef" stroke-width="2" stroke-linecap="round" opacity=".75"/>'
+            . '<g transform="translate(960 500)">'
+            . '<rect x="-210" y="-260" width="420" height="360" rx="32" fill="#ffffff" stroke="#d6dfeb" stroke-width="3"/>'
+            . '<path d="M-110 -62v-70c0-73 51-126 110-126s110 53 110 126v70H62v-70c0-44-26-78-62-78s-62 34-62 78v70z" fill="#1d4ed8"/>'
+            . '<rect x="-145" y="-78" width="290" height="180" rx="28" fill="#e7edf7"/>'
+            . '<circle cx="0" cy="-4" r="28" fill="#1d4ed8"/>'
+            . '<rect x="-12" y="18" width="24" height="54" rx="12" fill="#1d4ed8"/>'
+            . '<rect x="-145" y="-78" width="290" height="180" rx="28" fill="none" stroke="#dbe4f0" stroke-width="2"/>'
+            . '<text x="0" y="185" text-anchor="middle" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#0f172a">Private file</text>'
+            . '<text x="0" y="235" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#52657a">This public link is not available.</text>'
+            . '</g>'
+            . '</svg>';
+
+        http_response_code(200);
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: no-store, private');
+        header('Content-Type: image/svg+xml; charset=UTF-8');
+        header('Content-Disposition: inline; filename="private-file.svg"');
+        header('Content-Length: ' . strlen($svg));
+        echo $svg;
+        exit;
+    }
+
     private function canInline(array $file): bool
     {
         $mime = (string) ($file['mime_type'] ?? '');
@@ -474,6 +532,13 @@ class FileController
         );
 
         return implode(',', array_values(array_unique(array_filter(array_merge($mimes, $extensions)))));
+    }
+
+    private function uploadMaxSize(): int
+    {
+        global $config;
+
+        return max(0, (int) ($config['upload']['max_size'] ?? 0));
     }
 
     private function expectsJson(): bool

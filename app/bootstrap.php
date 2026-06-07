@@ -11,8 +11,12 @@ if (is_string($timezone) && in_array($timezone, timezone_identifiers_list(), tru
     date_default_timezone_set($timezone);
 }
 
+$config = require __DIR__ . '/config.php';
+$sessionLifetime = max(60, (int) ($config['session']['lifetime_minutes'] ?? 120) * 60);
+ini_set('session.gc_maxlifetime', (string) $sessionLifetime);
+
 session_set_cookie_params([
-    'lifetime' => 0,
+    'lifetime' => $sessionLifetime,
     'path' => '/',
     'domain' => '',
     'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
@@ -20,8 +24,6 @@ session_set_cookie_params([
     'samesite' => 'Lax',
 ]);
 session_start();
-
-$config = require __DIR__ . '/config.php';
 
 require dirname(__DIR__) . '/src/Core/Helpers.php';
 require dirname(__DIR__) . '/src/Core/Database.php';
@@ -36,6 +38,7 @@ require dirname(__DIR__) . '/src/Models/ActivityLog.php';
 require dirname(__DIR__) . '/src/Models/ActivityLogModel.php';
 require dirname(__DIR__) . '/src/Models/FileModel.php';
 require dirname(__DIR__) . '/src/Models/PasswordResetModel.php';
+require dirname(__DIR__) . '/src/Models/RememberTokenModel.php';
 require dirname(__DIR__) . '/src/Models/UserModel.php';
 require dirname(__DIR__) . '/src/Controllers/AuthController.php';
 require dirname(__DIR__) . '/src/Controllers/FileController.php';

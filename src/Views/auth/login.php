@@ -39,7 +39,11 @@ use Src\Core\Csrf;
                         <input class="form-control" type="password" name="password" autocomplete="current-password" required>
                     </div>
                 </div>
-                <div class="d-flex justify-content-end mb-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="form-check">
+                        <input id="remember" class="form-check-input" type="checkbox" name="remember" value="1">
+                        <label class="form-check-label small" for="remember">Remember me</label>
+                    </div>
                     <a class="small text-decoration-none" href="/forgot_password.php">Forgot password?</a>
                 </div>
                 <button class="btn btn-primary w-100 login-submit" type="submit">

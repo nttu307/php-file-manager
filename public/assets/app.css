@@ -262,6 +262,17 @@ body {
     color: #0d6efd;
 }
 
+.compact-action.is-restricted {
+    opacity: 0.5;
+}
+
+.compact-action.is-restricted:hover,
+.compact-action.is-restricted:focus {
+    background: #f8d7da;
+    color: #b02a37;
+    opacity: 1;
+}
+
 .compact-action.visibility-public {
     color: #198754;
 }
@@ -286,10 +297,64 @@ body {
     z-index: 1080;
 }
 
+.upload-drop-zone {
+    display: grid;
+    min-height: 132px;
+    place-items: center;
+    padding: 18px;
+    border: 1px dashed #b6c4d8;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.upload-drop-zone:hover,
+.upload-drop-zone.is-dragover {
+    border-color: #0d6efd;
+    background: #eef4ff;
+    box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.18);
+}
+
+.upload-drop-zone.is-disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
+.upload-drop-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 8px;
+    place-items: center;
+    border-radius: 8px;
+    background: #e9f1ff;
+    color: #0d6efd;
+    font-size: 22px;
+}
+
+.upload-drop-title {
+    display: block;
+    font-weight: 700;
+}
+
+.upload-drop-meta {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 13px;
+}
+
 .upload-preview-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
+}
+
+.upload-preview-grid.is-disabled {
+    pointer-events: none;
 }
 
 .upload-form {
@@ -314,6 +379,22 @@ body {
 
 .upload-preview-slot {
     grid-column: 1 / -1;
+}
+
+.upload-progress-slot {
+    grid-column: 1 / -1;
+}
+
+.upload-progress {
+    display: grid;
+    gap: 6px;
+}
+
+.upload-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    color: #475569;
+    font-size: 13px;
 }
 
 .upload-preview-item {
@@ -641,6 +722,35 @@ audio.file-preview-media {
     min-height: 420px;
     border: 0;
     background: #fff;
+}
+
+.upload-preview-grid.is-disabled .upload-preview-item {
+    opacity: 0.72;
+}
+
+.file-detail-list {
+    display: grid;
+    gap: 10px;
+}
+
+.file-detail-item {
+    display: grid;
+    gap: 3px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.file-detail-item span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.file-detail-item strong {
+    color: #1f2937;
+    font-size: 14px;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 991.98px) {

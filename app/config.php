@@ -6,6 +6,10 @@ return [
     'app_name' => Env::get('APP_NAME', 'PHP File Manager'),
     'base_url' => Env::get('APP_URL', 'http://localhost:8000'),
     'timezone' => Env::get('APP_TIMEZONE', 'Asia/Ho_Chi_Minh'),
+    'session' => [
+        'lifetime_minutes' => max(1, (int) Env::get('SESSION_LIFETIME_MINUTES', 120)),
+        'remember_me_days' => max(1, (int) Env::get('REMEMBER_ME_DAYS', 30)),
+    ],
     'db' => [
         'host' => Env::get('DB_HOST', '127.0.0.1'),
         'port' => Env::get('DB_PORT', '3306'),

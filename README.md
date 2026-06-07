@@ -74,12 +74,12 @@ php -S localhost:8000 -t public
 
 ## Role
 
-- `admin`: xem, tải, nén ZIP, xóa, khôi phục, quản lý toàn bộ file và quản lý user.
+- `admin`: xem, tải, nén ZIP, quản lý toàn bộ file và quản lý user. Admin chỉ xóa file do chính tài khoản admin upload.
 - `user`: upload, xem, tải, nén ZIP và xóa file của chính mình.
 
 ## Tính Năng
 
-- Login/logout bằng session.
+- Login/logout bằng session, hỗ trợ remember me bằng cookie token lưu hash trong database.
 - Upload nhiều file trong một lần.
 - Hỗ trợ ảnh JPG/PNG/GIF/WebP/AVIF/BMP, PDF, TXT, CSV, JSON, XML, YAML, Markdown, RTF, ZIP/RAR/7Z/TAR/GZ, Microsoft Office, OpenDocument, audio, video và font cơ bản.
 - Kiểm tra MIME thật và dung lượng từng file.
@@ -112,11 +112,18 @@ File này đã bao gồm toàn bộ bảng/cột/index cần thiết cho source 
 - `users`
 - `files`, bao gồm cột `file_type` để phân loại `image`, `document`, `archive`, `spreadsheet`, `presentation`, `audio`, `video`, `font`
 - `password_resets`, lưu hash token đặt lại mật khẩu
+- `remember_tokens`, lưu hash token đăng nhập dài hạn cho remember me
 - `activity_logs`
 
 Các cột thời gian như `created_at`, `updated_at`, `deleted_at`, `expires_at`, `used_at` được lưu bằng Unix timestamp. Khi hiển thị trên giao diện, hệ thống format lại theo dạng `dd/mm/YYYY HH:ii:ss` theo timezone cấu hình trong `APP_TIMEZONE`.
 
 Không cần chạy migration riêng.
+
+Nếu database đã tồn tại từ phiên bản cũ và chỉ cần thêm chức năng remember me, chạy:
+
+```bash
+mysql -u root -p php_file_manager < database/remember_tokens.sql
+```
 
 ## Dọn Thùng Rác Tự Động
 
@@ -143,6 +150,8 @@ Các tham số chính:
 APP_NAME="PHP File Manager"
 APP_URL="http://localhost:8000"
 APP_TIMEZONE="Asia/Ho_Chi_Minh"
+SESSION_LIFETIME_MINUTES="120"
+REMEMBER_ME_DAYS="30"
 
 DB_HOST="127.0.0.1"
 DB_PORT="3306"
